@@ -24,6 +24,7 @@ import select
 import sys
 import time
 import tty
+import contextlib
 
 PROMPT = b">>> "
 PASTE_BANNER = b"paste mode"
@@ -145,7 +146,7 @@ class Repl:
 
 class ReplError(RuntimeError):
     def __init__(self, line, detail):
-        super().__init__("while sending %r:\n%s" % (line, detail.strip()))
+        super().__init__("while sending {!r}:\n{}".format(line, detail.strip()))
 
 
 # --- board-side setup -------------------------------------------------------
@@ -195,8 +196,12 @@ print("SETUP-OK", W, H)
 # same at full current, then geometry.
 
 ANSI = {
-    "red": "\033[91m", "green": "\033[92m", "blue": "\033[94m",
-    "white": "\033[97m", "grey": "\033[90m", "off": "\033[90m",
+    "red": "\033[91m",
+    "green": "\033[92m",
+    "blue": "\033[94m",
+    "white": "\033[97m",
+    "grey": "\033[90m",
+    "off": "\033[90m",
 }
 RESET = "\033[0m"
 
@@ -205,80 +210,134 @@ def tests(width, height):
     w, h = width, height
     mid = h // 2
     return [
-        dict(key="off", colour="off", title="ALL OFF",
-             expect="every LED dark",
-             means="Still lit means nothing we send reaches the panel at all -- "
-                   "suspect the HUB75 seating, not software.",
-             code=["solid(0xFFFFFF)", "b.fill(0)"]),
-
-        dict(key="dim-red", colour="red", title="DIM RED, whole panel",
-             expect="even dim red, no banding",
-             means="Current here is tiny, so a fault at this step is NOT power.",
-             code=["solid(0x200000)"]),
-        dict(key="dim-green", colour="green", title="DIM GREEN, whole panel",
-             expect="even dim green",
-             means="Red worked but green does not => green data line or a rail "
-                   "too low for green's ~3.0 V forward drop.",
-             code=["solid(0x002000)"]),
-        dict(key="dim-blue", colour="blue", title="DIM BLUE, whole panel",
-             expect="even dim blue",
-             means="Same as green: data line, or a sagging rail.",
-             code=["solid(0x000020)"]),
-
-        dict(key="red", colour="red", title="FULL RED, whole panel",
-             expect="bright even red",
-             means="Dim red fine but full red banded => supply sags under load.",
-             code=["solid(0xFF0000)"]),
-        dict(key="green", colour="green", title="FULL GREEN, whole panel",
-             expect="bright even green",
-             means="Green absent at every brightness is a dead G1/G2 pin.",
-             code=["solid(0x00FF00)"]),
-        dict(key="blue", colour="blue", title="FULL BLUE, whole panel",
-             expect="bright even blue",
-             means="Blue absent at every brightness is a dead B1/B2 pin.",
-             code=["solid(0x0000FF)"]),
-        dict(key="white", colour="white", title="FULL WHITE -- maximum current",
-             expect="bright even white",
-             means="Red-only here while dim white was fine is a classic brownout.",
-             code=["solid(0xFFFFFF)"]),
-
-        dict(key="top", colour="white", title="TOP half only",
-             expect="rows 0-%d lit, bottom dark" % (mid - 1),
-             means="Drives R1/G1/B1. Dark top but working bottom isolates that trio.",
-             code=["solid(0xFFFFFF)", "only(0, 0, %d, %d)" % (w, mid)]),
-        dict(key="bottom", colour="white", title="BOTTOM half only",
-             expect="rows %d-%d lit, top dark" % (mid, h - 1),
-             means="Drives R2/G2/B2. Both halves wrong together is an address line.",
-             code=["only(0, %d, %d, %d)" % (mid, w, h)]),
-
-        dict(key="row0", colour="white", title="ONE ROW at the very top",
-             expect="a single clean line on the top edge",
-             means="Several lines, or a line in the wrong place, is a bad address pin.",
-             code=["only(0, 0, %d, 1)" % w]),
-        dict(key="col0", colour="white", title="ONE COLUMN down the left edge",
-             expect="a single clean line on the left edge",
-             means="A diagonal instead of a vertical means the configured width "
-                   "does not match the panel -- data is wrapping.",
-             code=["only(0, 0, 1, %d)" % h]),
-        dict(key="border", colour="white", title="1px BORDER on all four edges",
-             expect="a clean rectangle framing the whole panel",
-             means="Shows the panel's true extent. A border that stops short, or "
-                   "wraps, means the width or height is wrong.",
-             code=["b.fill(0)",
-                   "box(0, 0, %d, 1)" % w,
-                   "box(0, %d, %d, %d)" % (h - 1, w, h),
-                   "box(0, 0, 1, %d)" % h,
-                   "box(%d, 0, %d, %d)" % (w - 1, w, h)]),
-        dict(key="corners", colour="white", title="8x8 blocks in TOP-LEFT and BOTTOM-RIGHT",
-             expect="exactly two blocks, in opposite corners",
-             means="More than two blocks means the image is repeating -- the "
-                   "panel is wider or taller than configured.",
-             code=["b.fill(0)", "box(0, 0, 8, 8)",
-                   "box(%d, %d, %d, %d)" % (w - 8, h - 8, w, h)]),
+        dict(
+            key="off",
+            colour="off",
+            title="ALL OFF",
+            expect="every LED dark",
+            means="Still lit means nothing we send reaches the panel at all -- "
+            "suspect the HUB75 seating, not software.",
+            code=["solid(0xFFFFFF)", "b.fill(0)"],
+        ),
+        dict(
+            key="dim-red",
+            colour="red",
+            title="DIM RED, whole panel",
+            expect="even dim red, no banding",
+            means="Current here is tiny, so a fault at this step is NOT power.",
+            code=["solid(0x200000)"],
+        ),
+        dict(
+            key="dim-green",
+            colour="green",
+            title="DIM GREEN, whole panel",
+            expect="even dim green",
+            means="Red worked but green does not => green data line or a rail "
+            "too low for green's ~3.0 V forward drop.",
+            code=["solid(0x002000)"],
+        ),
+        dict(
+            key="dim-blue",
+            colour="blue",
+            title="DIM BLUE, whole panel",
+            expect="even dim blue",
+            means="Same as green: data line, or a sagging rail.",
+            code=["solid(0x000020)"],
+        ),
+        dict(
+            key="red",
+            colour="red",
+            title="FULL RED, whole panel",
+            expect="bright even red",
+            means="Dim red fine but full red banded => supply sags under load.",
+            code=["solid(0xFF0000)"],
+        ),
+        dict(
+            key="green",
+            colour="green",
+            title="FULL GREEN, whole panel",
+            expect="bright even green",
+            means="Green absent at every brightness is a dead G1/G2 pin.",
+            code=["solid(0x00FF00)"],
+        ),
+        dict(
+            key="blue",
+            colour="blue",
+            title="FULL BLUE, whole panel",
+            expect="bright even blue",
+            means="Blue absent at every brightness is a dead B1/B2 pin.",
+            code=["solid(0x0000FF)"],
+        ),
+        dict(
+            key="white",
+            colour="white",
+            title="FULL WHITE -- maximum current",
+            expect="bright even white",
+            means="Red-only here while dim white was fine is a classic brownout.",
+            code=["solid(0xFFFFFF)"],
+        ),
+        dict(
+            key="top",
+            colour="white",
+            title="TOP half only",
+            expect=f"rows 0-{mid - 1} lit, bottom dark",
+            means="Drives R1/G1/B1. Dark top but working bottom isolates that trio.",
+            code=["solid(0xFFFFFF)", f"only(0, 0, {w}, {mid})"],
+        ),
+        dict(
+            key="bottom",
+            colour="white",
+            title="BOTTOM half only",
+            expect=f"rows {mid}-{h - 1} lit, top dark",
+            means="Drives R2/G2/B2. Both halves wrong together is an address line.",
+            code=[f"only(0, {mid}, {w}, {h})"],
+        ),
+        dict(
+            key="row0",
+            colour="white",
+            title="ONE ROW at the very top",
+            expect="a single clean line on the top edge",
+            means="Several lines, or a line in the wrong place, is a bad address pin.",
+            code=[f"only(0, 0, {w}, 1)"],
+        ),
+        dict(
+            key="col0",
+            colour="white",
+            title="ONE COLUMN down the left edge",
+            expect="a single clean line on the left edge",
+            means="A diagonal instead of a vertical means the configured width "
+            "does not match the panel -- data is wrapping.",
+            code=[f"only(0, 0, 1, {h})"],
+        ),
+        dict(
+            key="border",
+            colour="white",
+            title="1px BORDER on all four edges",
+            expect="a clean rectangle framing the whole panel",
+            means="Shows the panel's true extent. A border that stops short, or "
+            "wraps, means the width or height is wrong.",
+            code=[
+                "b.fill(0)",
+                f"box(0, 0, {w}, 1)",
+                f"box(0, {h - 1}, {w}, {h})",
+                f"box(0, 0, 1, {h})",
+                f"box({w - 1}, 0, {w}, {h})",
+            ],
+        ),
+        dict(
+            key="corners",
+            colour="white",
+            title="8x8 blocks in TOP-LEFT and BOTTOM-RIGHT",
+            expect="exactly two blocks, in opposite corners",
+            means="More than two blocks means the image is repeating -- the "
+            "panel is wider or taller than configured.",
+            code=["b.fill(0)", "box(0, 0, 8, 8)", f"box({w - 8}, {h - 8}, {w}, {h})"],
+        ),
     ]
 
 
 # --- driving ----------------------------------------------------------------
+
 
 def find_port(explicit):
     if explicit:
@@ -292,13 +351,14 @@ def find_port(explicit):
 
 def banner(t):
     colour = ANSI.get(t["colour"], "")
-    print("\n%s%s  %s%s" % (colour, "=" * 4, t["title"], RESET))
-    print("   expect: %s" % t["expect"])
+    print("\n{}{}  {}{}".format(colour, "=" * 4, t["title"], RESET))
+    print("   expect: {}".format(t["expect"]))
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--port", help="serial device (default: first usbmodem)")
     ap.add_argument("--width", type=int, default=32, help="panel width (default 32)")
     ap.add_argument("--depth", type=int, default=4, help="bit depth (default 4)")
@@ -310,11 +370,11 @@ def main():
 
     if args.list:
         for t in tests(args.width, args.width):
-            print("  %-10s %s" % (t["key"], t["title"]))
+            print(f"  {t['key']:<10} {t['title']}")
         return
 
     port = find_port(args.port)
-    print("port: %s" % port)
+    print("port: {}".format(port))
     repl = Repl(port)
     notes = []
     try:
@@ -323,12 +383,12 @@ def main():
         out = repl.paste(SETUP % dict(width=args.width, depth=args.depth))
         line = [ln for ln in out.splitlines() if ln.startswith("SETUP-OK")]
         if not line:
-            sys.exit("setup did not report back:\n%s" % out.strip())
+            sys.exit("setup did not report back:\n{}".format(out.strip()))
         _, w, h = line[0].split()
         w, h = int(w), int(h)
-        print("matrix built: %d x %d, bit_depth=%d" % (w, h, args.depth))
+        print(f"matrix built: {w} x {h}, bit_depth={args.depth}")
         if w != args.width:
-            print("note: driver reports width %d" % w)
+            print(f"note: driver reports width {w}")
 
         all_tests = tests(w, h)
         by_key = {t["key"]: t for t in all_tests}
@@ -336,7 +396,7 @@ def main():
         if args.hold:
             t = by_key.get(args.hold)
             if not t:
-                sys.exit("unknown pattern %r (try --list)" % args.hold)
+                sys.exit("unknown pattern {!r} (try --list)".format(args.hold))
             repl.run(t["code"])
             banner(t)
             print("\n   Holding. Reseat connectors, wiggle the ribbon, measure the")
@@ -353,11 +413,13 @@ def main():
             want = [k.strip() for k in args.only.split(",")]
             missing = [k for k in want if k not in by_key]
             if missing:
-                sys.exit("unknown pattern(s): %s (try --list)" % ", ".join(missing))
+                sys.exit("unknown pattern(s): {} (try --list)".format(", ".join(missing)))
             chosen = [by_key[k] for k in want]
 
-        print("\nEnter = looked right.  Anything else = what you actually saw.\n"
-              "Ctrl-C stops and still prints the summary.")
+        print(
+            "\nEnter = looked right.  Anything else = what you actually saw.\n"
+            "Ctrl-C stops and still prints the summary."
+        )
         for t in chosen:
             repl.run(t["code"])
             banner(t)
@@ -371,14 +433,12 @@ def main():
                 break
             if said:
                 notes.append((t, said))
-                print("   if wrong: %s" % t["means"])
+                print("   if wrong: {}".format(t["means"]))
     except ReplError as exc:
-        print("\nREPL error: %s" % exc, file=sys.stderr)
+        print("\nREPL error: {}".format(exc), file=sys.stderr)
     finally:
-        try:
+        with contextlib.suppress(Exception):
             repl.run(["b.fill(0)"])
-        except Exception:
-            pass
         repl.reboot()
         repl.close()
 
@@ -389,10 +449,10 @@ def main():
     else:
         print("Paste this back:\n")
         for t, said in notes:
-            print("  %-10s %s" % (t["key"], t["title"]))
-            print("      saw:     %s" % said)
-            print("      expect:  %s" % t["expect"])
-            print("      meaning: %s" % t["means"])
+            print(f"  {t['key']:<10} {t['title']}")
+            print("      saw:     {}".format(said))
+            print("      expect:  {}".format(t["expect"]))
+            print("      meaning: {}".format(t["means"]))
             print()
     print("Board soft-rebooted; code.py is running again.")
 
