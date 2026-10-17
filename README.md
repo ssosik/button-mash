@@ -120,9 +120,14 @@ Everything else it imports — `board`, `busio`, `displayio`, `framebufferio`,
 `rgbmatrix`, `terminalio`, `storage`, `digitalio` — is already in the UF2.
 
 ```sh
-pip install circup
+uv tool install circup         # or: pipx install circup
 circup install adafruit_display_text
 ```
+
+A bare `pip install circup` fails on a Homebrew Python with
+`externally-managed-environment`. Install it as a *tool*, not into this repo — a
+virtualenv created inside `display/` drops a `.gitignore` containing `*`, which
+silently hides every file in that directory from git, `code.py` included.
 
 `circup` matches the bundle to the installed CircuitPython. By hand works too: copy
 `adafruit_display_text/` out of the bundle for your major version into `CIRCUITPY/lib/`.
@@ -154,6 +159,31 @@ The handshake is Teensy-driven: it sends `#CONREADY` and waits in `DisplayReadyW
 and the Portal answers `#DSPREADY`. A panel that scrolls while the Teensy never advances
 is a serial-link fault — check the TX/RX crossover first. Once they are talking, the
 debug `DISPLAY` screen sends every protocol message in turn.
+
+## When the panel itself is wrong
+
+`display/panel-test.py` runs on the host, not the board, and drives the panel
+directly over the CircuitPython REPL — one pattern at a time, naming each one and
+then waiting for you, so what is on the panel and what is on screen cannot drift
+apart. Each step states what you should see and what a deviation means.
+
+```sh
+python3 display/panel-test.py                # step through all fourteen
+python3 display/panel-test.py --hold green   # hold one, hands free for probing
+python3 display/panel-test.py --list         # names for --hold / --only
+```
+
+The order is deliberate: whether the panel blanks on command at all, then which
+colour channels light at a current too low for the supply to matter, then the same
+at full current, then geometry. A fault at a dim step is not a power problem; one
+that appears only at full white is.
+
+`--hold` is the one to reach for with a meter or a loose connector — it parks a
+pattern indefinitely while you reseat the HUB75 socket or probe the panel's own
+power terminals.
+
+It interrupts `code.py` on the way in and soft-reboots on the way out, so the game
+comes back by itself. Nothing is written to CIRCUITPY.
 
 # Debug mode
 
