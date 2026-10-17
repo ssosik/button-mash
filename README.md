@@ -191,6 +191,12 @@ Hold **both start buttons together for two seconds** during the attract loop. Ev
 reports to USB serial and mirrors a short banner onto the LED matrix, so the table can be
 tested standing up with nothing plugged into it.
 
+A lone start press waits `kStartArbitrationMs` (300 ms) before it starts a game, so the
+second button has time to arrive. Without that the first press leaves attract mode
+immediately and this gesture can never complete — which is exactly what happened once the
+Matrix Portal began answering the handshake and the Teensy stopped sitting in
+`DisplayReadyWait`, where nothing competes for the press.
+
 - **P1 start** — next screen
 - **P2 start** — act within the current screen
 - **both held** — leave debug mode

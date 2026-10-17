@@ -128,21 +128,53 @@ bool Game::DebugComboHeld(uint32_t now_ms) {
 
 bool Game::HandleAttractInput(uint32_t now_ms) {
   if (DebugComboHeld(now_ms)) {
+    _start_pending[0] = false;
+    _start_pending[1] = false;
     _debug.Enter(now_ms);
     NextState(DebugMode, now_ms);
     return true;
   }
 
+  // Record the press, but do not act on it yet. The debug gesture is both
+  // start buttons held together for two seconds, so acting the moment the
+  // first one latches would leave attract mode before the second finger
+  // landed and the combo could never complete. See kStartArbitrationMs.
+  if (_p1->TakeStartPress()) {
+    _start_pending[0] = true;
+    _start_pending_ms[0] = now_ms;
+  }
+  if (_p2->TakeStartPress()) {
+    _start_pending[1] = true;
+    _start_pending_ms[1] = now_ms;
+  }
+
+  // Once both are down this is a debug attempt, not a game start. Drop the
+  // pending presses and let DebugComboHeld own it; a combo that is abandoned
+  // before the hold completes then correctly does nothing at all.
+  if (_p1->Input().IsDown(config::kStartButtonIndex) &&
+      _p2->Input().IsDown(config::kStartButtonIndex)) {
+    _start_pending[0] = false;
+    _start_pending[1] = false;
+    return false;
+  }
+
   // Checked in order and returned immediately. The original checked both
   // players in sequence with no early exit, so a simultaneous press left P2
-  // overwriting the transition P1 had just made.
-  if (_p1->TakeStartPress()) {
+  // overwriting the transition P1 had just made. Both pending flags are
+  // cleared on the way out so a stale one cannot fire on a later visit here.
+  if (_start_pending[0] &&
+      now_ms - _start_pending_ms[0] >= config::kStartArbitrationMs) {
+    _start_pending[0] = false;
+    _start_pending[1] = false;
     _p1->Ready(now_ms);
     NextState(P1Ready, now_ms);
     return true;
   }
 
-  if (_p2->TakeStartPress()) {
+  if (_start_pending[1] &&
+      now_ms - _start_pending_ms[1] >= config::kStartArbitrationMs) {
+    _start_pending[0] = false;
+    _start_pending[1] = false;
     _p2->Ready(now_ms);
     NextState(P2Ready, now_ms);
     return true;

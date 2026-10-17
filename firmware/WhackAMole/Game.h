@@ -103,6 +103,11 @@ private:
 
   uint32_t _combo_started_ms = 0;
   bool _combo_active = false;
+
+  // Start presses seen but not yet acted on, indexed P1, P2. See
+  // HandleAttractInput and config::kStartArbitrationMs.
+  uint32_t _start_pending_ms[2] = {0, 0};
+  bool _start_pending[2] = {false, false};
 };
 
 #endif

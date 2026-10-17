@@ -201,6 +201,20 @@ constexpr uint32_t kDebugLedWalkMs = 300;
 // Samples averaged per button on the calibration screen.
 constexpr uint8_t kCalibrationSamples = 32;
 
+// How long a lone start press waits before it is allowed to start a game.
+//
+// Both start buttons together are the debug gesture; either one alone starts a
+// game. No two fingers land on the same millisecond, so acting on the first
+// press the instant it latches takes the state machine out of attract mode
+// before the second button has even been polled -- which made the debug combo
+// unreachable from attract mode entirely. Holding a lone press for this long
+// gives the second button time to arrive.
+//
+// Floor is kDebounceMs; a deliberate two-handed press is usually within 100-200
+// ms, so this leaves margin. It is also the delay a player feels between
+// pressing start and seeing READY, which is why it is not larger.
+constexpr uint32_t kStartArbitrationMs = 300;
+
 } // namespace config
 
 #endif
