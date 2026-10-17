@@ -148,6 +148,11 @@ class Scenes:
         if not scrolling:
             self.reset_positions()
 
+    def set_colors(self, p1_color=None, p2_color=None):
+        """Recolour each player's text. None restores that player's own colour."""
+        self.p1.color = P1_COLOR if p1_color is None else p1_color
+        self.p2.color = P2_COLOR if p2_color is None else p2_color
+
     def show_splash(self, showing):
         if showing == self.showing_splash:
             return
@@ -294,6 +299,37 @@ def on_tiegame(scenes, args):
     _both(scenes, "TIE GAME {}      ".format(score))
 
 
+def on_mode(scenes, args):
+    """#MODE:<banner> -- names the next part of the medley.
+
+    Unscrolled, like READY / SET / GO, so the banner must fit in five characters;
+    the leading space covers the first cell, which sits partly off the panel.
+    """
+    _both(scenes, " {}".format(args.decode("utf-8", "replace")), scrolling=False)
+
+
+def _parse_color(token):
+    """Six hex digits, or '-' when the player has nothing to find."""
+    if token == b"-":
+        return None
+    try:
+        return int(token.decode("utf-8"), 16)
+    except ValueError:
+        return None
+
+
+def on_target(scenes, args):
+    """#TARGET:<p1>:<p2> -- each player's score turns the colour they must find.
+
+    Recolouring the score rather than drawing a swatch needs no layout on a
+    32x32 panel that already holds two columns of rotated text.
+    """
+    parts = args.split(b":")
+    if len(parts) != 2:
+        return
+    scenes.set_colors(_parse_color(parts[0]), _parse_color(parts[1]))
+
+
 def on_debug(scenes, args):
     """#DEBUG:<banner> -- lets the table be tested without a laptop attached."""
     text = args.decode("utf-8", "replace")
@@ -314,7 +350,14 @@ HANDLERS = {
     b"#PLAYER2WIN": on_player2win,
     b"#TIEGAME": on_tiegame,
     b"#DEBUG": on_debug,
+    b"#MODE": on_mode,
+    b"#TARGET": on_target,
 }
+
+# Messages that leave the colours #TARGET set alone. Anything else is a new
+# screen, and a target colour carried over from the last mode would paint the
+# winner's banner, say, in the colour of a captcha prompt.
+KEEPS_TARGET_COLORS = (b"#SCORE", b"#TARGET")
 
 COUNTDOWN = {b"READY": on_ready, b"SET": on_set, b"GO": on_go}
 
@@ -325,6 +368,9 @@ def handle_line(scenes, line):
         return
 
     verb, _, args = line.partition(b":")
+
+    if verb not in KEEPS_TARGET_COLORS:
+        scenes.set_colors()
 
     if verb == b"#GAMEREADY":
         handler = COUNTDOWN.get(args)

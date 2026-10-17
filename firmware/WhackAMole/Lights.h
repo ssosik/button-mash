@@ -17,6 +17,8 @@ struct Color {
   uint8_t r, g, b;
 
   constexpr bool IsOff() const { return r == 0 && g == 0 && b == 0; }
+  constexpr bool operator==(const Color& o) const { return r == o.r && g == o.g && b == o.b; }
+  constexpr bool operator!=(const Color& o) const { return !(*this == o); }
 };
 
 namespace colors {
@@ -26,12 +28,27 @@ constexpr Color kMole = {255, 200, 40};  // lit mole cap
 constexpr Color kHit = {0, 255, 60};     // brief flash on a correct hit
 constexpr Color kMiss = {255, 0, 0};     // brief flash on a wrong button
 
-// Primaries, used only by the debug walk. Driving each channel on its own is
-// what distinguishes a dead colour from a dead pixel, and catches a ring wired
-// for a different byte order -- neither of which a white-only test can show.
+// Primaries. The debug walk drives each channel on its own, which is what
+// distinguishes a dead colour from a dead pixel and catches a ring wired for a
+// different byte order -- neither of which a white-only test can show. The
+// game modes use them too.
 constexpr Color kRed = {255, 0, 0};
 constexpr Color kGreen = {0, 255, 0};
 constexpr Color kBlue = {0, 0, 255};
+constexpr Color kYellow = {255, 180, 0};
+constexpr Color kMagenta = {255, 0, 180};
+
+// Chase's background is white, but dim. Full white in all ten caps is the
+// LED ALL worst case, 1.81 A, and Chase would hold it for a whole segment;
+// dimmed, the supply stays well clear and the runner is easier to pick out.
+constexpr Color kChaseBackground = {60, 60, 60};
+constexpr Color kChaseRunner = kMagenta;
+
+// Each cap's own colour, in button-index order, matching its dome. Simon lights
+// a step in this colour, so it reads as "the blue one" rather than as a colour
+// to decode.
+//                                                        B      R     W       G       Y
+constexpr Color kCapColors[config::kButtonsPerPlayer] = {kBlue, kRed, kWhite, kGreen, kYellow};
 } // namespace colors
 
 class Lights {

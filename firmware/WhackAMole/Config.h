@@ -175,10 +175,10 @@ constexpr uint32_t kDebounceMs = 25;
 // kMoleLifetimeMs, at which point the mole moves on by itself.
 constexpr int kMoleStartingPoints = 1000;
 
-// Preserves the original build's decay rate of one point per 20 ms.
-// Worth shortening once you have the debug mode to retune against; 20 seconds
-// is a long time for a single mole to stay up.
-constexpr uint32_t kMoleLifetimeMs = 20000;
+// Was 20 s, the original build's decay of one point per 20 ms. Whack is now a
+// 12 s segment of a medley (see MODE_LIST in Mode.h), and a mole that outlives
+// the whole segment means a player who misses once never sees a second one.
+constexpr uint32_t kMoleLifetimeMs = 2500;
 
 // Deducted for hitting a lit-up player's wrong button. The score floors at
 // zero rather than refusing to apply below this value.
@@ -186,6 +186,70 @@ constexpr int kWrongButtonPenalty = 500;
 
 // Blink period of the currently-lit mole cap.
 constexpr uint32_t kLedBlinkMs = 200;
+
+// --- Game modes ------------------------------------------------------------
+//
+// A game is a medley: every mode in MODE_LIST (Mode.h) runs in turn, both
+// players at once, and score carries across all of them. Segment lengths live
+// in MODE_LIST beside the mode names; what each mode does inside its segment is
+// tuned here.
+//
+// Points aim for roughly comparable totals per segment across modes, so no one
+// mode decides the game. They are first guesses: retune them against real
+// players, not on paper. The one property `make test` does hold them to is that
+// mashing at random loses points on average in every mode with a wrong button.
+
+// Banner between segments, lamps dark, so nobody misses the switch.
+constexpr uint32_t kModeIntroMs = 2000;
+
+// Captcha: the display names a colour, every cap shows a different one, and
+// they reshuffle on a timer. Press the cap showing the named colour.
+constexpr uint32_t kCaptchaShuffleMs = 1200; // how long one arrangement holds
+constexpr uint32_t kCaptchaGraceMs = 150;    // the old position still counts this long after
+constexpr int kCaptchaStartPoints = 1000;    // an instant find
+constexpr int kCaptchaFloorPoints = 200;     // a find that took the whole decay
+constexpr uint32_t kCaptchaDecayMs = 3000;
+constexpr int kCaptchaMissPenalty = 400; // high enough that a random press loses on average
+
+// Chase: every cap a dim white, one coloured runner stepping around the ring.
+// Hit the cap it is on, or the next one just before it lands. It speeds up with
+// each hit and eases off after each visit nobody hits, so the pace settles at
+// the player's level by itself.
+//
+// The order of the caps around each player's ring, as button indices
+// (0 blue, 1 red, 2 white, 3 green, 4 yellow). VERIFY against the table: this
+// is the one tunable here that depends on how the holes were drilled. It must
+// list every cap exactly once, and Mode.cpp will not compile if it does not.
+constexpr uint8_t kChasePath[kButtonsPerPlayer] = {0, 1, 2, 3, 4};
+constexpr uint32_t kChaseStartStepMs = 650; // runner's dwell per cap at the start
+constexpr uint32_t kChaseMinStepMs = 220;   // the fastest it gets
+constexpr uint8_t kChaseSpeedupPct = 88;    // dwell after a hit, as a % of before
+constexpr uint8_t kChaseSlowdownPct = 108;  // after an unhit visit, capped at the start pace
+constexpr uint32_t kChaseEarlyMs = 120;     // pressing the next cap this early still counts
+constexpr int kChaseHitPoints = 400;        // at the start pace; grows as the runner speeds up
+constexpr int kChaseMissPenalty = 300;      // likewise, so mashing loses at every pace
+
+// Logic: each press steps a cap to its next colour. Get all five showing the
+// colour named on the display. Four colours, so no cap is ever more than three
+// presses from the target.
+constexpr uint8_t kLogicColorCount = 4;
+constexpr int kLogicStartPoints = 2000;
+constexpr int kLogicFloorPoints = 500;
+constexpr uint32_t kLogicDecayMs = 10000;
+constexpr uint32_t kLogicSolvedHoldMs = 700; // the matched board stays up this long
+
+// Simon: watch the sequence, then play it back. Right, and it grows by one;
+// wrong, or too slow, and the same sequence plays again.
+constexpr uint8_t kSimonStartLength = 3;
+constexpr uint8_t kSimonMaxLength = 16;
+constexpr uint32_t kSimonLeadInMs = 600;        // dark pause before the sequence plays
+constexpr uint32_t kSimonOnMs = 420;            // each step lit
+constexpr uint32_t kSimonGapMs = 160;           // dark between steps
+constexpr uint32_t kSimonEchoMs = 200;          // a pressed cap lights this long
+constexpr uint32_t kSimonResultMs = 700;        // green or red flash after an attempt
+constexpr uint32_t kSimonInputTimeoutMs = 3000; // this long without a press is a miss
+constexpr int kSimonPointsPerStep = 400;        // per step of a completed sequence
+constexpr int kSimonMissPenalty = 300;
 
 // --- Debug mode ------------------------------------------------------------
 

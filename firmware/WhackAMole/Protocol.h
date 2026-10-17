@@ -41,6 +41,14 @@ constexpr const char kScore[] = "#SCORE:";
 // Debug mode banner: "#DEBUG:<text>"
 constexpr const char kDebug[] = "#DEBUG:";
 
+// Names the next mode of the medley, between segments: "#MODE:<banner>"
+constexpr const char kMode[] = "#MODE:";
+
+// The colour each player is being asked for, as six hex digits, or "-" when
+// the mode has no target. The display draws that player's score in it:
+// "#TARGET:<p1>:<p2>"
+constexpr const char kTarget[] = "#TARGET:";
+
 // Display -> controller
 constexpr const char kDisplayReady[] = "#DSPREADY";
 

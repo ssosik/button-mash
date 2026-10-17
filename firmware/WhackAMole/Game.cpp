@@ -16,9 +16,19 @@ constexpr uint32_t kStateTimeoutMs[GameStateCount] = {
 #undef X
 };
 
+// Six hex digits, or "-" for a mode with nothing to ask for.
+void FormatTarget(char* out, size_t size, Color color) {
+  if (color.IsOff()) {
+    snprintf(out, size, "-");
+  } else {
+    snprintf(out, size, "%02X%02X%02X", color.r, color.g, color.b);
+  }
+}
+
 } // namespace
 
-Game::Game(Player& p1, Player& p2) : _p1(&p1), _p2(&p2), _debug(p1, p2) {}
+Game::Game(Player& p1, Player& p2)
+    : _p1(&p1), _p2(&p2), _debug(p1, p2), _p1_modes(p1), _p2_modes(p2) {}
 
 void Game::Begin() {
   // All hardware setup happens here rather than in constructors. The originals
@@ -75,6 +85,72 @@ void Game::SendScore(int p1_score, int p2_score) {
   snprintf(line, sizeof(line), "%s%d:%d", protocol::kScore, p1_score, p2_score);
   WAM_DISPLAY_SERIAL.print(line);
   WAM_DISPLAY_SERIAL.print(protocol::kTerminator);
+}
+
+void Game::SendTargets() {
+  char p1[8];
+  char p2[8];
+  const ModeId mode = CurrentMode();
+  FormatTarget(p1, sizeof(p1), _p1->IsReady() ? _p1_modes.Get(mode).Target() : colors::kOff);
+  FormatTarget(p2, sizeof(p2), _p2->IsReady() ? _p2_modes.Get(mode).Target() : colors::kOff);
+
+  char line[sizeof(_last_targets)];
+  snprintf(line, sizeof(line), "%s%s:%s", protocol::kTarget, p1, p2);
+  if (strcmp(line, _last_targets) == 0) {
+    return;
+  }
+  strncpy(_last_targets, line, sizeof(_last_targets) - 1);
+  _last_targets[sizeof(_last_targets) - 1] = '\0';
+
+  WAM_DISPLAY_SERIAL.print(line);
+  WAM_DISPLAY_SERIAL.print(protocol::kTerminator);
+}
+
+void Game::ShowLamps() {
+  // Either player's Show() flushes the whole shared chain, and the second call
+  // finds nothing left to send. Calling both keeps this right for the plain
+  // dome lamps too, where each player's lamps are their own.
+  _p1->Lamps().Show();
+  _p2->Lamps().Show();
+}
+
+void Game::ClearLamps() {
+  _p1->Lamps().Clear();
+  _p2->Lamps().Clear();
+}
+
+// Dark lamps and a banner between segments, so the switch is unmistakable and
+// a last press in one mode cannot land in the next.
+void Game::EnterModeIntro(uint32_t now_ms) {
+  ClearLamps();
+  NextState(ModeIntro, now_ms);
+}
+
+void Game::StartMode(uint32_t now_ms) {
+  const ModeId mode = CurrentMode();
+
+  // Presses made while the banner was up belong to nobody.
+  _p1->Input().ClearPresses();
+  _p2->Input().ClearPresses();
+
+  // Only players who are in get a board. The other player's lamps stay dark in
+  // a single-player game.
+  if (_p1->IsReady()) {
+    _p1_modes.Get(mode).Begin(now_ms);
+  }
+  if (_p2->IsReady()) {
+    _p2_modes.Get(mode).Begin(now_ms);
+  }
+  ShowLamps();
+
+  // The banner replaced the score on the display, and SendScore only sends on
+  // a change. Forget what was last sent so the score and targets go out again
+  // even when nobody has scored since the previous segment.
+  _last_p1_score = -1;
+  _last_p2_score = -1;
+  _last_targets[0] = '\0';
+
+  NextState(PlayGame, now_ms);
 }
 
 bool Game::ReadDisplayLine() {
@@ -166,7 +242,7 @@ bool Game::HandleAttractInput(uint32_t now_ms) {
       now_ms - _start_pending_ms[0] >= config::kStartArbitrationMs) {
     _start_pending[0] = false;
     _start_pending[1] = false;
-    _p1->Ready(now_ms);
+    _p1->Ready();
     NextState(P1Ready, now_ms);
     return true;
   }
@@ -175,7 +251,7 @@ bool Game::HandleAttractInput(uint32_t now_ms) {
       now_ms - _start_pending_ms[1] >= config::kStartArbitrationMs) {
     _start_pending[0] = false;
     _start_pending[1] = false;
-    _p2->Ready(now_ms);
+    _p2->Ready();
     NextState(P2Ready, now_ms);
     return true;
   }
@@ -274,7 +350,7 @@ void Game::Tick(uint32_t now_ms) {
   case P1Ready:
     SendMessage(protocol::kIsP2Ready);
     if (_p2->TakeStartPress()) {
-      _p2->Ready(now_ms);
+      _p2->Ready();
       NextState(StartCountdownReady, now_ms);
       break;
     }
@@ -286,7 +362,7 @@ void Game::Tick(uint32_t now_ms) {
   case P2Ready:
     SendMessage(protocol::kIsP1Ready);
     if (_p1->TakeStartPress()) {
-      _p1->Ready(now_ms);
+      _p1->Ready();
       NextState(StartCountdownReady, now_ms);
       break;
     }
@@ -320,19 +396,42 @@ void Game::Tick(uint32_t now_ms) {
     // Discard anything mashed during the countdown so the round starts clean.
     _p1->Input().ClearPresses();
     _p2->Input().ClearPresses();
-    _p1->NewMole(now_ms);
-    _p2->NewMole(now_ms);
-    NextState(PlayGame, now_ms);
+    _mode_index = 0;
+    EnterModeIntro(now_ms);
     break;
 
-  case PlayGame:
-    _p1->Update(now_ms);
-    _p2->Update(now_ms);
-    SendScore(_p1->Score(), _p2->Score());
+  case ModeIntro:
+    snprintf(line, sizeof(line), "%s%s", protocol::kMode, ModeBanner(CurrentMode()));
+    SendMessage(line);
     if (StateTimedOut(now_ms)) {
-      NextState(GameEnd, now_ms);
+      StartMode(now_ms);
     }
     break;
+
+  case PlayGame: {
+    const ModeId mode = CurrentMode();
+    if (_p1->IsReady()) {
+      _p1_modes.Get(mode).Update(now_ms);
+    }
+    if (_p2->IsReady()) {
+      _p2_modes.Get(mode).Update(now_ms);
+    }
+    ShowLamps();
+    SendScore(_p1->Score(), _p2->Score());
+    SendTargets();
+
+    // Each mode runs for its own length, so this state has no fixed timeout.
+    if (now_ms - _state_entered_ms >= ModeLengthMs(mode)) {
+      if (_mode_index + 1 < kModeCount) {
+        _mode_index++;
+        EnterModeIntro(now_ms);
+      } else {
+        ClearLamps();
+        NextState(GameEnd, now_ms);
+      }
+    }
+    break;
+  }
 
   case GameEnd:
     _p1->NotReady();
@@ -359,14 +458,14 @@ void Game::Tick(uint32_t now_ms) {
     if (_p1->TakeStartPress()) {
       _p1->Reset();
       _p2->Reset();
-      _p1->Ready(now_ms);
+      _p1->Ready();
       NextState(P1Ready, now_ms);
       break;
     }
     if (_p2->TakeStartPress()) {
       _p1->Reset();
       _p2->Reset();
-      _p2->Ready(now_ms);
+      _p2->Ready();
       NextState(P2Ready, now_ms);
       break;
     }

@@ -3,6 +3,7 @@
 
 #include "Config.h"
 #include "Debug.h"
+#include "Mode.h"
 #include "Player.h"
 #include <Arduino.h>
 
@@ -36,10 +37,12 @@
   X(StartCountdownReady, "STARTREADY", 2000)                                                       \
   X(StartCountdownSet, "STARTSET", 2000)                                                           \
   X(StartCountdownGo, "STARTGO", 1000)                                                             \
-  /* Light the first moles. */                                                                     \
+  /* Start the medley at its first mode. */                                                       \
   X(StartGame, "STARTGAME", 200)                                                                   \
-  /* How long a round lasts. */                                                                    \
-  X(PlayGame, "PLAYGAME", 60000)                                                                   \
+  /* Banner naming the next mode, lamps dark. */                                                   \
+  X(ModeIntro, "MODEINTRO", config::kModeIntroMs)                                                  \
+  /* One mode's segment. Ends at that mode's own length; see MODE_LIST. */                        \
+  X(PlayGame, "PLAYGAME", 0)                                                                       \
   X(GameEnd, "GAMEEND", 200)                                                                       \
   X(ShowWinner, "SHOWWINNER", 10000)                                                               \
   /* Hardware test screens; leaves only when the operator asks. */                                  \
@@ -87,16 +90,33 @@ private:
   // debug. Returns true if a transition happened.
   bool HandleAttractInput(uint32_t now_ms);
 
+  // Medley plumbing: dark lamps and a banner between segments, then the next
+  // mode begun for every player who is in.
+  void EnterModeIntro(uint32_t now_ms);
+  void StartMode(uint32_t now_ms);
+  ModeId CurrentMode() const { return (ModeId) _mode_index; }
+
+  // Flush both players' staged lamp changes in one go. See Mode.h.
+  void ShowLamps();
+  void ClearLamps();
+
+  // Send each player's target colour, suppressing repeats like SendScore.
+  void SendTargets();
+
   GameState _state = Boot;
   uint32_t _state_entered_ms = 0;
 
   Player* _p1;
   Player* _p2;
   Debug _debug;
+  PlayerModes _p1_modes;
+  PlayerModes _p2_modes;
+  uint8_t _mode_index = 0;
 
   char _last_message[48] = {};
   int _last_p1_score = -1;
   int _last_p2_score = -1;
+  char _last_targets[32] = {};
 
   char _rx_buf[48] = {};
   uint8_t _rx_len = 0;

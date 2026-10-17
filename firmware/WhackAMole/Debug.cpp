@@ -34,7 +34,8 @@ const char* const kDisplayTestMessages[] = {
     protocol::kShowPressStart,  protocol::kIsP1Ready,      protocol::kIsP2Ready,
     protocol::kCountdownReady,  protocol::kCountdownSet,   protocol::kCountdownGo,
     "#PLAYER1WIN:12345",        "#PLAYER2WIN:12345",       "#TIEGAME:12345",
-    "#SCORE:1234:5678",
+    "#MODE:CHASE",              "#SCORE:1234:5678",        "#TARGET:FF0000:00FF00",
+    "#TARGET:-:-",
 };
 constexpr uint8_t kDisplayTestCount =
     sizeof(kDisplayTestMessages) / sizeof(kDisplayTestMessages[0]);

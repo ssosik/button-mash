@@ -57,13 +57,16 @@ game state of its own.
 | `firmware/WhackAMole/Config.h` | Every pin, timing value, and gameplay tunable. Nothing else holds a bare pin number. |
 | `firmware/WhackAMole/Protocol.h` | The controller/display wire protocol. Mirrored by `HANDLERS` in `code.py`. |
 | `firmware/WhackAMole/WhackAMole.ino` | Wires the hardware objects together and runs the loop. |
-| `firmware/WhackAMole/Game.cpp` | Game states, transitions, and the messages sent for each. |
-| `firmware/WhackAMole/Player.cpp` | Per-player score, current mole, and lamp state. |
+| `firmware/WhackAMole/Game.cpp` | Game states, transitions, and the messages sent for each. Runs the medley. |
+| `firmware/WhackAMole/Mode.h` | `MODE_LIST`: every way to play, in order, with its banner and segment length. |
+| `firmware/WhackAMole/*Mode.cpp` | One file per mode: Whack, Captcha, Chase, Logic, Simon. See [Game modes](#game-modes). |
+| `firmware/WhackAMole/Player.cpp` | One player's buttons, lamps and score. What a press *means* lives in the modes. |
 | `firmware/WhackAMole/ButtonInput.cpp` | Buttons, with debounce and edge detection. Analog ladder or one GPIO per button. |
 | `firmware/WhackAMole/Lights.cpp` | Button lamps. Plain on/off or WS2812 pixels. |
 | `firmware/WhackAMole/Debug.cpp` | Hardware test screens. See below. |
 | `display/code.py` | Listens on the UART and drives the panel. |
 | `display/boot.py` | Decides whether the game or the host computer owns writes to CIRCUITPY. |
+| `firmware/test/` | Host-side tests that play every mode. `make test`; no Teensy needed. |
 
 Input and lamp hardware are selected at build time in `Config.h`:
 
@@ -92,6 +95,7 @@ make build     # compile the configuration selected in Config.h
 make matrix    # compile all four input/lamp combinations
 make upload    # compile and flash a connected Teensy
 make lint      # clang-format check + ruff
+make test      # play every game mode on this computer; no Teensy needed
 ```
 
 # Flashing the Matrix Portal
@@ -184,6 +188,33 @@ power terminals.
 
 It interrupts `code.py` on the way in and soft-reboots on the way out, so the game
 comes back by itself. Nothing is written to CIRCUITPY.
+
+# Game modes
+
+A game is a **medley**: every mode runs in turn, both players at once, each for its own
+segment, with a banner between them. Score carries across all of them and the higher total
+wins. The order and segment lengths are `MODE_LIST` in `Mode.h`; everything each mode does
+inside its segment is tuned in `Config.h`.
+
+| Mode | Banner | What you do |
+| --- | --- | --- |
+| Whack | `WHACK` | The original game. One cap blinks; hit it before it moves on. |
+| Captcha | `FIND` | Your score turns a colour. Every cap shows a different colour, reshuffling; press the one that matches. |
+| Chase | `CHASE` | Every cap dim white, one magenta runner circling. Hit the cap it's on — or the next one, just before it lands. Speeds up with each hit. |
+| Logic | `LOGIC` | Each press steps a cap to its next colour. Get all five to the colour your score is showing. |
+| Simon | `SIMON` | Watch the sequence, play it back. Right, and it grows by one; wrong or too slow, and it replays. |
+
+Two things to check on the real table:
+
+- **`kChasePath`** in `Config.h` is the order of the caps around each player's ring. It
+  defaults to button-index order; set it to the real clockwise order or the runner will jump
+  around rather than circle. The build refuses a list that skips or repeats a cap.
+- **Point values are first guesses.** `make test` holds every mode with a wrong button to one
+  rule — mashing at random loses points on average — but how the modes weigh against each
+  other needs real players.
+
+Adding a mode is a line in `MODE_LIST` and a class in `Mode.h`. Forgetting the class is a
+compile error, and `make test` fails if its banner won't fit on the panel unscrolled.
 
 # Debug mode
 

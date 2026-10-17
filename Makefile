@@ -23,7 +23,7 @@ BUILD   := build
 CHROME  := /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 SOURCES := $(wildcard firmware/WhackAMole/*.cpp firmware/WhackAMole/*.h) $(SKETCH)/WhackAMole.ino
 
-.PHONY: all build matrix upload monitor format format-check tidy lint-py lint check-pins stl wiring-pdf clean
+.PHONY: all build matrix upload monitor format format-check tidy lint-py lint check-pins stl wiring-pdf test clean
 
 all: build
 
@@ -153,6 +153,18 @@ wiring-pdf:
 	  "file://$(PWD)/$(BUILD)/wiring-print.html" 2>/dev/null || true
 	@test -f docs/mole-table-wiring.pdf && echo "docs/mole-table-wiring.pdf" || \
 	  (echo "PDF not produced -- is Chrome at $(CHROME)?" && exit 1)
+
+## Play every game mode on the host, through the real debounce, with scripted
+## players. No Teensy needed. Built with AddressSanitizer and UBSan, so an
+## out-of-range cap index fails the run instead of quietly corrupting memory.
+TEST_SRCS := $(addprefix $(SKETCH)/,Mode.cpp WhackMode.cpp CaptchaMode.cpp ChaseMode.cpp \
+               LogicMode.cpp SimonMode.cpp Player.cpp ButtonInput.cpp Lights.cpp)
+test:
+	@mkdir -p $(BUILD)
+	$(CXX) -std=c++17 -O1 -g -Wall -Wextra -fsanitize=address,undefined \
+	  -Ifirmware/test/shim -I$(SKETCH) -DWAM_INPUT_GPIO=1 -DWAM_LIGHTS_PIXELS=0 \
+	  firmware/test/test_modes.cpp $(TEST_SRCS) -o $(BUILD)/test_modes
+	$(BUILD)/test_modes
 
 clean:
 	rm -rf $(BUILD)
