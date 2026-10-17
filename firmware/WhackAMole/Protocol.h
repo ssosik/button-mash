@@ -47,6 +47,9 @@ constexpr const char kMode[] = "#MODE:";
 // The colour each player is being asked for, as six hex digits, or "-" when
 // the mode has no target. The display draws that player's score in it:
 // "#TARGET:<p1>:<p2>"
+// A target may carry a word, "RRGGBB,WORD" (Captcha's Stroop rounds). The
+// display then shows the word in that colour instead of the score; the colour
+// is still the answer.
 constexpr const char kTarget[] = "#TARGET:";
 
 // Display -> controller

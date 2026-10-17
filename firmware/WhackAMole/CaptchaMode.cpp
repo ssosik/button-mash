@@ -3,6 +3,8 @@
 void CaptchaMode::Begin(uint32_t now_ms) {
   _target_cap = -1;
   _target = (uint8_t) random(palette::kCount);
+  _word = -1;
+  _finds = 0;
   _target_since_ms = now_ms;
   Deal(now_ms);
 }
@@ -53,6 +55,16 @@ void CaptchaMode::NewTarget(uint32_t now_ms) {
   }
   _target = next;
   _target_since_ms = now_ms;
+  _word = -1;
+  if (_finds >= config::kCaptchaPlainFinds) {
+    // Any nameable colour but the ink. It is usually showing on some cap too,
+    // which is what makes it pull.
+    int8_t word = (int8_t) _target;
+    while (word == (int8_t) _target || palette::kNames[word] == nullptr) {
+      word = (int8_t) random(palette::kCount);
+    }
+    _word = word;
+  }
   Deal(now_ms);
   // The old position showed the old colour. A late press there is a miss, not
   // a hit that arrived inside the grace window.
@@ -74,8 +86,12 @@ void CaptchaMode::Update(uint32_t now_ms) {
         (int8_t) i == _target_cap || (in_grace && (int8_t) i == _previous_cap);
     if (on_target && !found) {
       found = true;
-      Owner().AddPoints(Decaying(config::kCaptchaStartPoints, config::kCaptchaFloorPoints,
-                                 _target_since_ms, now_ms, config::kCaptchaDecayMs));
+      const int start = _word < 0 ? config::kCaptchaStartPoints : config::kCaptchaStroopStartPoints;
+      Owner().AddPoints(Decaying(start, config::kCaptchaFloorPoints, _target_since_ms, now_ms,
+                                 config::kCaptchaDecayMs));
+      if (_finds < 255) {
+        _finds++;
+      }
     } else {
       Owner().Penalize(config::kCaptchaMissPenalty);
     }

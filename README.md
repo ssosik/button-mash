@@ -199,7 +199,7 @@ inside its segment is tuned in `Config.h`.
 | Mode | Banner | What you do |
 | --- | --- | --- |
 | Whack | `WHACK` | The original game. One cap blinks; hit it before it moves on. |
-| Captcha | `FIND` | Your score turns a colour. Every cap shows a different colour, reshuffling; press the one that matches. |
+| Captcha | `FIND` | Your score turns a colour. Every cap shows a different colour, reshuffling; press the one that matches. After your first six finds the score becomes a colour *word* drawn in a different colour — the Stroop effect. Press the colour it's drawn in, not the one it says. |
 | Chase | `CHASE` | Every cap dim white, one magenta runner circling. Hit the cap it's on — or the next one, just before it lands. Speeds up with each hit. |
 | Logic | `LOGIC` | Each press steps a cap to its next colour. Get all five to the colour your score is showing. |
 | Simon | `SIMON` | Watch the sequence, play it back. Right, and it grows by one; wrong or too slow, and it replays. |

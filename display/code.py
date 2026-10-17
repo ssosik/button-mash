@@ -130,6 +130,11 @@ class Scenes:
         self.scrolling = True
         self.frame = 0
 
+        # Captcha's Stroop words, per player. While one is up it holds that
+        # player's column and the score waits in score_text until it goes.
+        self.words = [None, None]
+        self.score_text = ["", ""]
+
         self.reset_positions()
         display.root_group = self.players
 
@@ -242,6 +247,16 @@ def on_go(scenes, args):
     _both(scenes, "  GO! ", scrolling=False)
 
 
+def _show_columns(scenes):
+    """Each player's column: their Stroop word if one is up, else their score."""
+    p1, p2 = (
+        " " + word if word else score
+        for word, score in zip(scenes.words, scenes.score_text)
+    )
+    scenes.show_splash(False)
+    scenes.set_text(p1, p2, scrolling=False)
+
+
 def on_score(scenes, args):
     """#SCORE:<p1>:<p2>"""
     parts = args.split(b":")
@@ -253,10 +268,8 @@ def on_score(scenes, args):
     except ValueError:
         return
 
-    scenes.show_splash(False)
-    scenes.set_text(
-        "{:>6d}".format(p1_score), "{:>6d}".format(p2_score), scrolling=False
-    )
+    scenes.score_text = ["{:>6d}".format(p1_score), "{:>6d}".format(p2_score)]
+    _show_columns(scenes)
 
 
 def _win(scenes, args, winner):
@@ -308,26 +321,38 @@ def on_mode(scenes, args):
     _both(scenes, " {}".format(args.decode("utf-8", "replace")), scrolling=False)
 
 
-def _parse_color(token):
-    """Six hex digits, or '-' when the player has nothing to find."""
-    if token == b"-":
-        return None
+def _parse_target(token):
+    """'RRGGBB', 'RRGGBB,WORD', or '-' when the player has nothing to find.
+
+    Returns (colour or None, word or None).
+    """
+    color, _, word = token.partition(b",")
+    if color == b"-":
+        return None, None
     try:
-        return int(token.decode("utf-8"), 16)
+        color = int(color.decode("utf-8"), 16)
     except ValueError:
-        return None
+        return None, None
+    return color, (word.decode("utf-8", "replace") or None)
 
 
 def on_target(scenes, args):
     """#TARGET:<p1>:<p2> -- each player's score turns the colour they must find.
 
     Recolouring the score rather than drawing a swatch needs no layout on a
-    32x32 panel that already holds two columns of rotated text.
+    32x32 panel that already holds two columns of rotated text. In Captcha's
+    Stroop rounds a word takes the score's place, drawn in the colour to find
+    and naming a different one.
     """
     parts = args.split(b":")
     if len(parts) != 2:
         return
-    scenes.set_colors(_parse_color(parts[0]), _parse_color(parts[1]))
+    (p1_color, p1_word), (p2_color, p2_word) = (_parse_target(p) for p in parts)
+    scenes.set_colors(p1_color, p2_color)
+    words = [p1_word, p2_word]
+    if words != scenes.words:
+        scenes.words = words
+        _show_columns(scenes)
 
 
 def on_debug(scenes, args):
@@ -371,6 +396,7 @@ def handle_line(scenes, line):
 
     if verb not in KEEPS_TARGET_COLORS:
         scenes.set_colors()
+        scenes.words = [None, None]
 
     if verb == b"#GAMEREADY":
         handler = COUNTDOWN.get(args)

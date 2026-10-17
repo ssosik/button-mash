@@ -262,6 +262,10 @@ void TestCaptcha() {
   int last = 0;
   int finds = 0;
   bool fell = false;
+  bool early_word = false;
+  bool honest_word = false;
+  bool word_fits = true;
+  int worded = 0;
   Color target = mode.Target();
   r.Run(mode, 15000, [&] {
     check_board();
@@ -270,6 +274,19 @@ void TestCaptcha() {
     if (mode.Target() != target) {
       finds++;
       target = mode.Target();
+      worded += mode.Word() != nullptr;
+    }
+    const char* word = mode.Word();
+    if (finds < config::kCaptchaPlainFinds) {
+      early_word |= word != nullptr;
+    }
+    if (word != nullptr) {
+      word_fits &= std::strlen(word) <= 5;
+      for (uint8_t c = 0; c < palette::kCount; c++) {
+        const char* name = palette::kNames[c];
+        honest_word |= name != nullptr && std::strcmp(name, word) == 0 &&
+                       palette::kColors[c] == mode.Target();
+      }
     }
     const int cap = FindColor(r.lights, mode.Target());
     if (cap >= 0 && r.CanPress()) {
@@ -283,7 +300,15 @@ void TestCaptcha() {
   // The grace window is what keeps that from costing a perfect player points.
   CHECK(!fell, "a player who only ever presses the target lost points");
   CHECK(finds >= 10, "only %d finds in a segment", finds);
-  std::printf("    scripted perfect player: %d from %d finds\n", r.player.Score(), finds);
+  CHECK(!early_word, "a Stroop word appeared before %d finds", config::kCaptchaPlainFinds);
+  // Counted as targets are dealt: the one dealt by find N is target N+1, so
+  // every target from the one after the last plain find onwards has a word.
+  const int later = finds - config::kCaptchaPlainFinds + 1;
+  CHECK(worded == later, "%d of the %d targets after the plain rounds had a word", worded, later);
+  CHECK(!honest_word, "a Stroop word named the colour it was drawn in");
+  CHECK(word_fits, "a Stroop word is longer than the five cells the panel shows");
+  std::printf("    scripted perfect player: %d from %d finds, %d with a word\n", r.player.Score(),
+              finds, worded);
 
   // The grace window, directly: press where the target was, just after a deal.
   randomSeed(23);

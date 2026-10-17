@@ -16,12 +16,17 @@ constexpr uint32_t kStateTimeoutMs[GameStateCount] = {
 #undef X
 };
 
-// Six hex digits, or "-" for a mode with nothing to ask for.
-void FormatTarget(char* out, size_t size, Color color) {
+// Six hex digits, or "-" for a mode with nothing to ask for, then ",WORD" when
+// the mode has a word for the display to draw in that colour.
+void FormatTarget(char* out, size_t size, const Mode* mode) {
+  const Color color = mode == nullptr ? colors::kOff : mode->Target();
+  const char* word = mode == nullptr ? nullptr : mode->Word();
   if (color.IsOff()) {
     snprintf(out, size, "-");
-  } else {
+  } else if (word == nullptr) {
     snprintf(out, size, "%02X%02X%02X", color.r, color.g, color.b);
+  } else {
+    snprintf(out, size, "%02X%02X%02X,%s", color.r, color.g, color.b, word);
   }
 }
 
@@ -88,11 +93,11 @@ void Game::SendScore(int p1_score, int p2_score) {
 }
 
 void Game::SendTargets() {
-  char p1[8];
-  char p2[8];
+  char p1[16];
+  char p2[16];
   const ModeId mode = CurrentMode();
-  FormatTarget(p1, sizeof(p1), _p1->IsReady() ? _p1_modes.Get(mode).Target() : colors::kOff);
-  FormatTarget(p2, sizeof(p2), _p2->IsReady() ? _p2_modes.Get(mode).Target() : colors::kOff);
+  FormatTarget(p1, sizeof(p1), _p1->IsReady() ? &_p1_modes.Get(mode) : nullptr);
+  FormatTarget(p2, sizeof(p2), _p2->IsReady() ? &_p2_modes.Get(mode) : nullptr);
 
   char line[sizeof(_last_targets)];
   snprintf(line, sizeof(line), "%s%s:%s", protocol::kTarget, p1, p2);

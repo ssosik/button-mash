@@ -116,7 +116,7 @@ private:
   char _last_message[48] = {};
   int _last_p1_score = -1;
   int _last_p2_score = -1;
-  char _last_targets[32] = {};
+  char _last_targets[48] = {}; // "#TARGET:RRGGBB,WHITE:RRGGBB,WHITE" fits
 
   char _rx_buf[48] = {};
   uint8_t _rx_len = 0;

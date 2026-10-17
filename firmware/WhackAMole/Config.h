@@ -211,6 +211,14 @@ constexpr int kCaptchaFloorPoints = 200;     // a find that took the whole decay
 constexpr uint32_t kCaptchaDecayMs = 3000;
 constexpr int kCaptchaMissPenalty = 400; // high enough that a random press loses on average
 
+// Captcha's later rounds add the Stroop effect: the score gives way to a colour
+// word, drawn in a different colour. The rule does not change -- press the
+// colour the word is drawn in -- but reading is automatic and the word pulls
+// the eye to the wrong cap. Each player gets it after their own first few
+// finds, so it arrives once they have learned the plain version.
+constexpr uint8_t kCaptchaPlainFinds = 6;        // finds before the words start
+constexpr int kCaptchaStroopStartPoints = 1500;  // slower to answer, so worth more
+
 // Chase: every cap a dim white, one coloured runner stepping around the ring.
 // Hit the cap it is on, or the next one just before it lands. It speeds up with
 // each hit and eases off after each visit nobody hits, so the pace settles at
