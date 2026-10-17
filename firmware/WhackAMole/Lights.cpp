@@ -45,6 +45,11 @@ byte g_pixel_drawing[config::kPixelCount * 3];
 
 WS2812Serial g_chain(config::kPixelCount, g_pixel_display, g_pixel_drawing,
                      config::kPixelDataPin, WS2812_GRB);
+
+// Set by either player's instance, cleared by whichever one transmits. One
+// chain carries both players, so one flag is enough, and it makes a Show() with
+// nothing new to send free.
+bool g_dirty = false;
 } // namespace
 
 PixelLights::PixelLights(uint16_t first_pixel, bool owns_chain)
@@ -69,15 +74,21 @@ void PixelLights::Set(uint8_t index, Color color) {
   for (uint8_t p = 0; p < config::kPixelsPerButton; p++) {
     g_chain.setPixel(base + p, color.r, color.g, color.b);
   }
+  g_dirty = true;
 }
 
 void PixelLights::Show() {
-  if (!_owns_chain) {
-    return; // the chain owner transmits for both players
+  // Either instance may flush. This used to be owner-only, so P2's changes
+  // reached the caps only when P1 next happened to call Show() -- up to a
+  // blink period late, and never at all in a P2-only game, where P1 is not
+  // ready and never calls it.
+  if (!g_dirty) {
+    return;
   }
+  g_dirty = false;
   // show() waits internally for any prior DMA transfer to drain, so it is safe
-  // to call at the blink rate. (The library declares busy() but never defines
-  // it, so it cannot be used as a guard.)
+  // to call every tick. (The library declares busy() but never defines it, so
+  // it cannot be used as a guard.)
   g_chain.show();
 }
 #endif

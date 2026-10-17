@@ -68,8 +68,8 @@ private:
 // --- WS2812 pixels in the caps ----------------------------------------------
 //
 // Both players share one physical chain on one pin, so each instance writes
-// into a slice of a single shared buffer and only the owner of the chain
-// actually transmits.
+// into a slice of a single shared buffer. Only the owner initializes the chain,
+// but either may flush it: Show() sends whatever either player has changed.
 class PixelLights : public Lights {
 public:
   // `first_pixel` is this player's offset into the shared chain.
