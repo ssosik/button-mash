@@ -495,6 +495,15 @@ h3.sub-h{margin-top:26px;margin-bottom:10px}
     USB-C instead, from a pigtail carrying 5 V and ground off the bus; the board has its own CC
     pulldowns, so a dumb source is fine. Unplug that pigtail when connecting a computer. Feed
     the panel straight from the bus, not through the Portal.</p>
+    <p><b>What it looks like when you get this wrong:</b> the panel lights
+    <b>red, and only red</b> — at every colour you ask for and every brightness,
+    usually with banding that crawls as the scan runs. Red dice forward at about
+    1.8&nbsp;V while green and blue need nearer 3.0&nbsp;V, so a rail dragged down by
+    the long thin path through the Portal's USB-C connector and PCB traces can still
+    light the red die and nothing else. <b>The tell is that it does not change with
+    brightness.</b> A supply that merely sags under load renders a dim image correctly
+    and only breaks near full white; one that is low all the time is red from the very
+    first pixel. Feeding the panel straight from the star fixes it outright.</p>
     <p><b>That pigtail hangs off the star, not off a second port on the bank.</b> A bank shares
     one power budget across its ports, so a second cord buys no headroom — and it leaves the
     Portal's ground meeting the controller's only inside the bank, which drags the return path
