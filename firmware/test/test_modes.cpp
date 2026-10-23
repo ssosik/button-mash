@@ -8,6 +8,7 @@
 #include "Arduino.h"
 #include "ButtonInput.h"
 #include "Config.h"
+#include "Dance.h"
 #include "Lights.h"
 #include "Mode.h"
 #include "Player.h"
@@ -592,6 +593,81 @@ void TestMasher() {
   }
 }
 
+void TestDance() {
+  std::printf("dance\n");
+  const Color dance[] = {colors::kRed, colors::kYellow, colors::kGreen, colors::kBlue,
+                         colors::kMagenta};
+  auto is_dance = [&](Color c) {
+    for (const Color& d : dance) {
+      if (c == d) {
+        return true;
+      }
+    }
+    return c.IsOff();
+  };
+  // Colour on the cap at ring position k (kChasePath order).
+  auto at = [](const FakeLights& l, int k) {
+    return l.cap[config::kChasePath[(k + kCaps) % kCaps]];
+  };
+
+  FakeLights fwd;
+  FakeLights rev;
+  FakeLights fwd_next;
+  FakeLights rev_next;
+  bool known = true;
+  bool spins = true;
+  bool mirrored = true;
+  bool flashes = true;
+  bool alternates = true;
+  int lit_steps = 0;
+  int steps = 0;
+  const uint32_t step = config::kDanceStepMs;
+  const uint32_t patterns = 3;
+
+  for (uint32_t t = 0; t < patterns * config::kDancePatternMs * 2; t += step) {
+    Dance(fwd, t, false);
+    Dance(rev, t, true);
+    Dance(fwd_next, t + step, false);
+    Dance(rev_next, t + step, true);
+    const uint32_t pattern = (t / config::kDancePatternMs) % patterns;
+    const bool same_pattern = (t + step) / config::kDancePatternMs == t / config::kDancePatternMs;
+
+    int lit = 0;
+    int distinct_lit = 0;
+    for (int k = 0; k < kCaps; k++) {
+      known &= is_dance(fwd.cap[k]) && is_dance(rev.cap[k]);
+      lit += !fwd.cap[k].IsOff();
+      distinct_lit += !at(fwd, k).IsOff() && at(fwd, k) != at(fwd, k - 1);
+    }
+    lit_steps += lit > 0;
+    steps++;
+
+    if (pattern == 0 && same_pattern) {
+      for (int k = 0; k < kCaps; k++) {
+        // Each colour moves one place on: forward for P1, backward for P2.
+        spins &= at(fwd_next, k + 1) == at(fwd, k);
+        mirrored &= at(rev_next, k - 1) == at(rev, k);
+      }
+      spins &= distinct_lit == kCaps;
+    }
+    if (pattern == 1) {
+      flashes &= lit == 0 || lit == kCaps;
+    }
+    if (pattern == 2) {
+      // Never all on, never all off: it is the half-and-half swap.
+      alternates &= lit > 0 && lit < kCaps;
+    }
+  }
+
+  CHECK(known, "the dance showed a colour outside its set");
+  CHECK(spins, "the spin did not carry every colour one place round the ring per step");
+  CHECK(mirrored, "P2's spin does not run the opposite way to P1's");
+  CHECK(flashes, "the flash lit some caps but not others");
+  CHECK(alternates, "the alternate pattern lit all caps or none");
+  CHECK(lit_steps * 4 >= steps * 3, "caps lit on only %d of %d steps", lit_steps, steps);
+  std::printf("    caps lit on %d of %d steps\n", lit_steps, steps);
+}
+
 } // namespace
 
 int main() {
@@ -602,6 +678,7 @@ int main() {
   TestLogic();
   TestSimon();
   TestMasher();
+  TestDance();
   std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
   return g_failures == 0 ? 0 : 1;
 }

@@ -158,7 +158,8 @@ wiring-pdf:
 ## players. No Teensy needed. Built with AddressSanitizer and UBSan, so an
 ## out-of-range cap index fails the run instead of quietly corrupting memory.
 TEST_SRCS := $(addprefix $(SKETCH)/,Mode.cpp WhackMode.cpp CaptchaMode.cpp ChaseMode.cpp \
-               LogicMode.cpp SimonMode.cpp Player.cpp ButtonInput.cpp Lights.cpp)
+               LogicMode.cpp SimonMode.cpp Player.cpp ButtonInput.cpp Lights.cpp \
+               Dance.cpp)
 test:
 	@mkdir -p $(BUILD)
 	$(CXX) -std=c++17 -O1 -g -Wall -Wextra -fsanitize=address,undefined \

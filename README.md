@@ -59,6 +59,7 @@ game state of its own.
 | `firmware/WhackAMole/WhackAMole.ino` | Wires the hardware objects together and runs the loop. |
 | `firmware/WhackAMole/Game.cpp` | Game states, transitions, and the messages sent for each. Runs the medley. |
 | `firmware/WhackAMole/Mode.h` | `MODE_LIST`: every way to play, in order, with its banner and segment length. |
+| `firmware/WhackAMole/Dance.cpp` | The splash screen's lamp dance: colours spinning round each ring, all caps flashing, alternate caps swapping. Timing in `Config.h`. |
 | `firmware/WhackAMole/*Mode.cpp` | One file per mode: Whack, Captcha, Chase, Logic, Simon. See [Game modes](#game-modes). |
 | `firmware/WhackAMole/Player.cpp` | One player's buttons, lamps and score. What a press *means* lives in the modes. |
 | `firmware/WhackAMole/ButtonInput.cpp` | Buttons, with debounce and edge detection. Analog ladder or one GPIO per button. |
@@ -161,6 +162,10 @@ proves CircuitPython, the library, the HUB75 wiring and the panel, with the Teen
 involved. The title gives way as soon as the Teensy sends anything. The words, timings and
 the small font the title is drawn in (needed because `BUTTON` is too long for the built-in
 one) are at the top of `code.py`.
+
+Meanwhile every cap lights white as soon as the Teensy boots, which draws enough to keep a
+USB power bank from switching itself off. The caps go dark when the attract loop starts,
+and then dance during its splash screen.
 
 The handshake is Teensy-driven: it sends `#CONREADY` and waits in `DisplayReadyWait`,
 and the Portal answers `#DSPREADY`. A panel that stays on the title while the Teensy never advances

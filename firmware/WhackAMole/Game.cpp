@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Dance.h"
 #include "Protocol.h"
 
 namespace {
@@ -42,6 +43,11 @@ void Game::Begin() {
 
   _p1->Begin();
   _p2->Begin();
+
+  // Draw a real load straight away so a power bank does not decide the table
+  // is idle and switch off. Lit until NewGame clears them for the attract loop.
+  _p1->Lamps().SetAll(colors::kWhite);
+  _p2->Lamps().SetAll(colors::kWhite);
 
   Serial.println(F("Whack A Mole Attack: controller boot"));
   NextState(Boot, millis());
@@ -319,10 +325,17 @@ void Game::Tick(uint32_t now_ms) {
 
   case ShowSplash:
     SendMessage(protocol::kShowSplash);
+    Dance(_p1->Lamps(), now_ms - _state_entered_ms, false);
+    Dance(_p2->Lamps(), now_ms - _state_entered_ms, true);
+    ShowLamps();
+    // The dance belongs to the splash alone; whatever comes next starts dark.
+    // Debug mode included: it lights its first screen on its own timer.
     if (HandleAttractInput(now_ms)) {
+      ClearLamps();
       break;
     }
     if (StateTimedOut(now_ms)) {
+      ClearLamps();
       NextState(ShowHighScore, now_ms);
     }
     break;

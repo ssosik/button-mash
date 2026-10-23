@@ -187,6 +187,19 @@ constexpr int kWrongButtonPenalty = 500;
 // Blink period of the currently-lit mole cap.
 constexpr uint32_t kLedBlinkMs = 200;
 
+// --- Power-on and attract lamps --------------------------------------------
+
+// Every cap lights at power-on and stays lit until the attract loop starts. A
+// USB power bank turns its output off when the load looks idle, and the
+// moments before the display answers are when nothing else draws enough to
+// keep it awake. All ten caps white is the LED ALL load, measured on the
+// debug screen, so the supply already has to carry it.
+
+// The splash screen's lamp dance: three patterns in turn, each for
+// kDancePatternMs, stepping every kDanceStepMs. See Dance.h.
+constexpr uint32_t kDanceStepMs = 160;
+constexpr uint32_t kDancePatternMs = 2600; // the 8 s splash shows all three, about once
+
 // --- Game modes ------------------------------------------------------------
 //
 // A game is a medley: every mode in MODE_LIST (Mode.h) runs in turn, both
