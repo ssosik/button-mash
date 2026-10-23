@@ -13,6 +13,7 @@ import board
 import busio
 import displayio
 import framebufferio
+import math
 import rgbmatrix
 import terminalio
 import time
@@ -25,7 +26,6 @@ MATRIX_HEIGHT = 32
 BAUDRATE = 115200
 
 HIGHSCORE_PATH = "/highscore.txt"
-SPLASH_BITMAP = "running-monty-mole.bmp"
 
 P1_COLOR = 0x33FF55
 P2_COLOR = 0xFF99FF
@@ -37,9 +37,8 @@ SCROLL_PERIOD = 125
 # label has fully left the panel.
 CHAR_CELL = 6
 
-SPLASH_LEFT_LIMIT = -55
-
-# Title shown from power-on until the Teensy first speaks, one word at a time.
+# The splash: a spinning pinwheel behind the title, one word at a time. Shown
+# from power-on until the Teensy first speaks, and again whenever it asks.
 TITLE_WORDS = ("CUB", "SCOUT", "BUTTON", "MASH")
 TITLE_WORD_MS = 700  # each word lit
 TITLE_GAP_MS = 150  # dark between words
@@ -63,9 +62,19 @@ TITLE_FONT = {
 TITLE_FONT_HEIGHT = 7
 
 # Left edge of each player's title column, mirrored about the panel's centre
-# like the score columns.
+# like the score columns. Each column carries a one-pixel black outline round
+# the letters, so it reaches one pixel further either side.
 TITLE_P1_X = 5
 TITLE_P2_X = MATRIX_WIDTH - TITLE_P1_X - TITLE_FONT_HEIGHT
+TITLE_COLUMN_WIDTH = TITLE_FONT_HEIGHT + 2
+
+# The pinwheel. Each pixel belongs to one blade for good; spinning only moves
+# the colours round the blades, which costs a palette update rather than a
+# redraw of 1,024 pixels.
+PINWHEEL_BLADES = 12
+PINWHEEL_TWIST = 0.3  # turns of curl from the centre to the corners; 0 for straight blades
+PINWHEEL_LEVEL = 0.35  # blade brightness, kept low so the words stay on top
+PINWHEEL_STEP_MS = 90  # one blade's turn
 
 # --- Panel setup -----------------------------------------------------------
 
@@ -122,7 +131,40 @@ def save_highscore(score):
         return False
 
 
-# --- Title -----------------------------------------------------------------
+# --- Splash ----------------------------------------------------------------
+
+
+def hue_color(hue, level):
+    """A fully saturated colour as 0xRRGGBB. `hue` is in turns, 0 to 1."""
+    sector = (hue % 1.0) * 6
+    i = int(sector)
+    f = sector - i
+    rising, falling = f, 1 - f
+    r, g, b = (
+        (1, rising, 0),
+        (falling, 1, 0),
+        (0, 1, rising),
+        (0, falling, 1),
+        (rising, 0, 1),
+        (1, 0, falling),
+    )[i % 6]
+    return (int(r * 255 * level) << 16) | (int(g * 255 * level) << 8) | int(b * 255 * level)
+
+
+def pinwheel_blade(x, y):
+    """Which blade the pixel at (x, y) belongs to."""
+    dx = x - (MATRIX_WIDTH - 1) / 2
+    dy = y - (MATRIX_HEIGHT - 1) / 2
+    radius = math.sqrt(dx * dx + dy * dy) / (MATRIX_WIDTH / 2)
+    turn = math.atan2(dy, dx) / (2 * math.pi) + PINWHEEL_TWIST * radius
+    return int((turn % 1.0) * PINWHEEL_BLADES) % PINWHEEL_BLADES
+
+
+def pinwheel_colors():
+    """One colour per blade, the rainbow once round."""
+    return [hue_color(i / PINWHEEL_BLADES, PINWHEEL_LEVEL) for i in range(PINWHEEL_BLADES)]
+
+
 
 
 def title_pixels(word):
@@ -143,23 +185,37 @@ def title_pixels(word):
     return lit, along - 1
 
 
+# Title column bitmap values: see-through, letter, and the outline round it.
+CLEAR, LETTER, OUTLINE = 0, 1, 2
+
+
 def draw_title_word(p1_bitmap, p2_bitmap, word):
-    """Draw `word` into both title columns, centred along each.
+    """Draw `word` into both title columns, centred along each and outlined.
 
     Turned the same way as the score columns: P1's reads downward with the tops
     of the letters toward the panel's right edge, P2's reads upward with them
     toward the left, so each player sees it upright from their own side.
     """
-    p1_bitmap.fill(0)
-    p2_bitmap.fill(0)
+    p1_bitmap.fill(CLEAR)
+    p2_bitmap.fill(CLEAR)
     if not word:
         return
     lit, length = title_pixels(word)
     start = (MATRIX_HEIGHT - length) // 2
     last_row = TITLE_FONT_HEIGHT - 1
-    for along, row in lit:
-        p1_bitmap[last_row - row, start + along] = 1
-        p2_bitmap[row, MATRIX_HEIGHT - 1 - (start + along)] = 1
+    # Column-local coordinates, one pixel in from the edge to leave room for
+    # the outline.
+    p1 = set((1 + last_row - row, start + along) for along, row in lit)
+    p2 = set((1 + row, MATRIX_HEIGHT - 1 - (start + along)) for along, row in lit)
+    for bitmap, letters in ((p1_bitmap, p1), (p2_bitmap, p2)):
+        for x, y in letters:
+            for nx in (x - 1, x, x + 1):
+                for ny in (y - 1, y, y + 1):
+                    inside = 0 <= nx < TITLE_COLUMN_WIDTH and 0 <= ny < MATRIX_HEIGHT
+                    if inside and (nx, ny) not in letters:
+                        bitmap[nx, ny] = OUTLINE
+        for x, y in letters:
+            bitmap[x, y] = LETTER
 
 
 def title_frames():
@@ -176,14 +232,9 @@ def title_frames():
 
 
 class Scenes:
-    """What this panel can show: the title, the attract splash, and the score."""
+    """What this panel can show: the splash, and the players' text."""
 
     def __init__(self):
-        odb = displayio.OnDiskBitmap(SPLASH_BITMAP)
-        self.mole = displayio.TileGrid(odb, pixel_shader=odb.pixel_shader)
-        self.splash = displayio.Group()
-        self.splash.append(self.mole)
-
         self.p1 = label.Label(
             text="",
             font=terminalio.FONT,
@@ -205,21 +256,34 @@ class Scenes:
         self.players.append(self.p1)
         self.players.append(self.p2)
 
-        self.title = displayio.Group()
+        self.splash = displayio.Group()
+
+        wheel = displayio.Bitmap(MATRIX_WIDTH, MATRIX_HEIGHT, PINWHEEL_BLADES)
+        for y in range(MATRIX_HEIGHT):
+            for x in range(MATRIX_WIDTH):
+                wheel[x, y] = pinwheel_blade(x, y)
+        self.wheel_colors = pinwheel_colors()
+        self.wheel_palette = displayio.Palette(PINWHEEL_BLADES)
+        self.wheel_turn = 0
+        self.wheel_since = 0
+        self._paint_wheel()
+        self.splash.append(displayio.TileGrid(wheel, pixel_shader=self.wheel_palette))
+
         self.title_bitmaps = []
-        for x, color in ((TITLE_P1_X, P1_COLOR), (TITLE_P2_X, P2_COLOR)):
-            bitmap = displayio.Bitmap(TITLE_FONT_HEIGHT, MATRIX_HEIGHT, 2)
-            palette = displayio.Palette(2)
-            palette[0] = 0x000000
-            palette[1] = color
-            self.title.append(displayio.TileGrid(bitmap, pixel_shader=palette, x=x))
+        for x, color in ((TITLE_P1_X - 1, P1_COLOR), (TITLE_P2_X - 1, P2_COLOR)):
+            bitmap = displayio.Bitmap(TITLE_COLUMN_WIDTH, MATRIX_HEIGHT, 3)
+            palette = displayio.Palette(3)
+            palette[CLEAR] = 0x000000
+            palette[LETTER] = color
+            palette[OUTLINE] = 0x000000
+            palette.make_transparent(CLEAR)
+            self.splash.append(displayio.TileGrid(bitmap, pixel_shader=palette, x=x))
             self.title_bitmaps.append(bitmap)
         self.title_frames = title_frames()
         self.title_index = 0
         self.title_since = 0
 
         self.showing_splash = False
-        self.showing_title = False
         self.scrolling = True
         self.frame = 0
 
@@ -247,26 +311,32 @@ class Scenes:
         self.p2.color = P2_COLOR if p2_color is None else p2_color
 
     def show_splash(self, showing):
-        if showing == self.showing_splash and not self.showing_title:
+        if showing == self.showing_splash:
             return
         self.showing_splash = showing
-        self.showing_title = False
+        if showing:
+            # From the first word each time, so it always reads as a title.
+            self.title_index = 0
+            self.title_since = self.wheel_since = time.monotonic_ns() // 1000000
+            self._draw_title_frame()
         display.root_group = self.splash if showing else self.players
 
-    def show_title(self):
-        self.showing_splash = False
-        self.showing_title = True
-        self.title_index = 0
-        self.title_since = time.monotonic_ns() // 1000000
-        self._draw_title_frame()
-        display.root_group = self.title
+    def _paint_wheel(self):
+        count = PINWHEEL_BLADES
+        for blade in range(count):
+            self.wheel_palette[blade] = self.wheel_colors[(blade + self.wheel_turn) % count]
 
     def _draw_title_frame(self):
         word, _ = self.title_frames[self.title_index]
         draw_title_word(self.title_bitmaps[0], self.title_bitmaps[1], word)
 
-    def _tick_title(self):
+    def _tick_splash(self):
         now = time.monotonic_ns() // 1000000
+        if now - self.wheel_since >= PINWHEEL_STEP_MS:
+            self.wheel_since = now
+            self.wheel_turn = (self.wheel_turn + 1) % PINWHEEL_BLADES
+            self._paint_wheel()
+
         _, hold = self.title_frames[self.title_index]
         if now - self.title_since < hold:
             return
@@ -285,14 +355,8 @@ class Scenes:
             line.y = -line.bounding_box[2]
 
     def tick(self):
-        if self.showing_title:
-            self._tick_title()
-            return
-
         if self.showing_splash:
-            self.mole.x -= 1
-            if self.mole.x < SPLASH_LEFT_LIMIT:
-                self.mole.x = MATRIX_WIDTH
+            self._tick_splash()
             return
 
         if not self.scrolling:
@@ -499,8 +563,9 @@ def handle_line(scenes, line):
 
     verb, _, args = line.partition(b":")
 
-    # The title holds only until the Teensy first speaks.
-    if scenes.showing_title:
+    # The splash holds only until the Teensy says something else -- including
+    # at power-on, before it has asked for the splash at all.
+    if scenes.showing_splash and verb != b"#SHOWSPLASH":
         scenes.show_splash(False)
 
     if verb not in KEEPS_TARGET_COLORS:
@@ -528,7 +593,7 @@ def handle_line(scenes, line):
 uart = busio.UART(board.TX, board.RX, baudrate=BAUDRATE, timeout=0)
 state = {"highscore": load_highscore()}
 scenes = Scenes()
-scenes.show_title()
+scenes.show_splash(True)
 
 rx_buffer = b""
 

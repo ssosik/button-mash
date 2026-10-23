@@ -140,11 +140,14 @@ A bundle from the wrong major version fails at import with *incompatible .mpy fi
 
 ## 3. The files
 
-All three go in the **root** of `CIRCUITPY`; the bitmap is opened by a relative path.
+Both go in the **root** of `CIRCUITPY`.
 
 ```sh
-cp display/code.py display/boot.py display/running-monty-mole.bmp /Volumes/CIRCUITPY/
+cp display/code.py display/boot.py /Volumes/CIRCUITPY/
 ```
+
+The splash is drawn in code, so there is no image to copy. A `running-monty-mole.bmp`
+left on the drive from an older version is unused and can be deleted.
 
 Copy `boot.py` last. On the next reset it calls `storage.remount("/", readonly=False)`,
 which hands writes to the program and makes the drive **read-only to your computer**.
@@ -156,11 +159,13 @@ locked out, Ctrl-C into the REPL and run `import storage; storage.remount("/", r
 
 ## Checking it
 
-On reset, before any serial traffic, `code.py` shows the title, **CUB SCOUT BUTTON
-MASH**, flashing one word at a time in two columns, green for P1 and pink for P2. That
+On reset, before any serial traffic, `code.py` shows the splash: **CUB SCOUT BUTTON
+MASH**, one word at a time in two columns, green for P1 and pink for P2, over a spinning
+rainbow pinwheel. That
 proves CircuitPython, the library, the HUB75 wiring and the panel, with the Teensy not
-involved. The title gives way as soon as the Teensy sends anything. The words, timings and
-the small font the title is drawn in (needed because `BUTTON` is too long for the built-in
+involved. The splash gives way as soon as the Teensy sends anything, and
+comes back each time the attract loop asks for it. The words, timings, pinwheel and the
+small font the title is drawn in (needed because `BUTTON` is too long for the built-in
 one) are at the top of `code.py`.
 
 Meanwhile every cap lights white as soon as the Teensy boots, which draws enough to keep a
@@ -168,7 +173,7 @@ USB power bank from switching itself off. The caps go dark when the attract loop
 and then dance during its splash screen.
 
 The handshake is Teensy-driven: it sends `#CONREADY` and waits in `DisplayReadyWait`,
-and the Portal answers `#DSPREADY`. A panel that stays on the title while the Teensy never advances
+and the Portal answers `#DSPREADY`. A panel that stays on the splash while the Teensy never advances
 is a serial-link fault — check the TX/RX crossover first. Once they are talking, the
 debug `DISPLAY` screen sends every protocol message in turn.
 
