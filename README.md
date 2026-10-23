@@ -239,7 +239,7 @@ Matrix Portal began answering the handshake and the Teensy stopped sitting in
 | --- | --- |
 | LED WALK | Lights each cap in turn and names it. A cap that stays dark is a wiring fault. |
 | LED ALL | Everything on solid. Sit here with a meter on the 5 V rail. |
-| BUTTONS | Live raw values and decoded button names for both players. |
+| BUTTONS | The panel shows the held button, still: `P1 B1`–`P1 B5` in wiring order (blue, red, white, green, yellow), `P2 ST` for P2's start, `NONE` when nothing is down. Serial logs live raw values and colour names for both players. |
 | CALIBRATE | Walks you through pressing every button, then prints a paste-ready `kLadderThresholds` table and a safe tolerance. Not needed once the buttons are on GPIOs. |
 | DISPLAY | Sends every protocol message in turn so `code.py` can be checked against the full vocabulary without playing a round. |
 

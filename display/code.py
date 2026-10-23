@@ -449,10 +449,21 @@ def on_target(scenes, args):
     scenes.set_colors(_parse_color(parts[0]), _parse_color(parts[1]))
 
 
+# The most characters a column shows without scrolling; see on_mode.
+STILL_TEXT_MAX = 5
+
+
 def on_debug(scenes, args):
-    """#DEBUG:<banner> -- lets the table be tested without a laptop attached."""
+    """#DEBUG:<banner> -- lets the table be tested without a laptop attached.
+
+    A banner short enough to fit, like the button screen's "P1 B3", is shown
+    still so it can be read at a glance; a longer one scrolls.
+    """
     text = args.decode("utf-8", "replace")
-    _both(scenes, "{}      ".format(text))
+    if len(text) <= STILL_TEXT_MAX:
+        _both(scenes, " " + text, scrolling=False)
+    else:
+        _both(scenes, "{}      ".format(text))
 
 
 HANDLERS = {

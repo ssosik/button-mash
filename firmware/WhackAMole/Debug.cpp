@@ -217,7 +217,13 @@ void Debug::UpdateButtonRead(uint32_t now_ms) {
   for (uint8_t p = 0; p < 2; p++) {
     const int8_t down = _players[p]->Input().DownIndex();
     if (down >= 0) {
-      snprintf(banner, sizeof(banner), "%s %s", _players[p]->Name(), kButtonNames[down]);
+      // Short enough for the panel to show still: "P1 B3", or "P2 ST" for the
+      // start button. Serial below still names the colour.
+      if (down == config::kStartButtonIndex) {
+        snprintf(banner, sizeof(banner), "%s ST", _players[p]->Name());
+      } else {
+        snprintf(banner, sizeof(banner), "%s B%d", _players[p]->Name(), down + 1);
+      }
       any_named = true;
     }
   }

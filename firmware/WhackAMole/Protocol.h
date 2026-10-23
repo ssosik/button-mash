@@ -38,7 +38,8 @@ constexpr const char kTieGame[] = "#TIEGAME:";
 // Live score: "#SCORE:<p1>:<p2>"
 constexpr const char kScore[] = "#SCORE:";
 
-// Debug mode banner: "#DEBUG:<text>"
+// Debug mode banner: "#DEBUG:<text>". Five characters or fewer is shown still,
+// anything longer scrolls.
 constexpr const char kDebug[] = "#DEBUG:";
 
 // Names the next mode of the medley, between segments: "#MODE:<banner>"
