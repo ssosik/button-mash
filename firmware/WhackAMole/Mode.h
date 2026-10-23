@@ -52,12 +52,6 @@ constexpr Color kColors[] = {colors::kRed,    colors::kGreen,   colors::kBlue,
                              colors::kYellow, colors::kMagenta, colors::kWhite};
 constexpr uint8_t kCount = sizeof(kColors) / sizeof(kColors[0]);
 
-// What Captcha's Stroop rounds may spell, by palette index. The panel shows a
-// word unscrolled in a five-cell column, so a name longer than five letters
-// cannot be shown: yellow has none and is only ever ink, never a word.
-constexpr const char* kNames[] = {"RED", "GREEN", "BLUE", nullptr, "PINK", "WHITE"};
-static_assert(sizeof(kNames) / sizeof(kNames[0]) == kCount, "one name slot per palette colour");
-
 static_assert(kCount >= config::kButtonsPerPlayer, "Captcha deals a distinct colour to every cap");
 static_assert(config::kLogicColorCount >= 2 && config::kLogicColorCount <= kCount,
               "Logic cycles through at least two palette colours");
@@ -76,10 +70,6 @@ public:
   // The colour the display should ask this player for, or colors::kOff when
   // the mode has no target.
   virtual Color Target() const { return colors::kOff; }
-
-  // A word to draw in the Target() colour in place of the score, or nullptr.
-  // It is a lure, never the answer; see kCaptchaPlainFinds.
-  virtual const char* Word() const { return nullptr; }
 
 protected:
   explicit Mode(Player& owner) : _owner(&owner) {}
@@ -123,23 +113,19 @@ private:
 // --- Captcha ---------------------------------------------------------------
 //
 // The display names a colour. Every cap shows a different colour, reshuffling
-// on a timer; press the cap that is showing the named one. Later rounds name it
-// with a word that lies about it -- the Stroop effect.
+// on a timer; press the cap that is showing the named one.
 class CaptchaMode : public Mode {
 public:
   explicit CaptchaMode(Player& owner) : Mode(owner) {}
   void Begin(uint32_t now_ms) override;
   void Update(uint32_t now_ms) override;
   Color Target() const override { return palette::kColors[_target]; }
-  const char* Word() const override { return _word < 0 ? nullptr : palette::kNames[_word]; }
 
 private:
   void NewTarget(uint32_t now_ms);
   void Deal(uint32_t now_ms);
 
   uint8_t _target = 0;       // palette index being asked for
-  int8_t _word = -1;         // palette index the lure word names, or -1 for none
-  uint8_t _finds = 0;        // this segment; past kCaptchaPlainFinds, the words start
   int8_t _target_cap = -1;   // the cap showing it
   int8_t _previous_cap = -1; // where it was before the last deal; see kCaptchaGraceMs
   uint32_t _target_since_ms = 0;
