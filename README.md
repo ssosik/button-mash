@@ -155,12 +155,15 @@ locked out, Ctrl-C into the REPL and run `import storage; storage.remount("/", r
 
 ## Checking it
 
-On reset, before any serial traffic, `code.py` scrolls **"Whack A Mole Attack"**
-vertically in two columns — green for P1, pink for P2. That proves CircuitPython, the
-library, the HUB75 wiring and the panel, with the Teensy not involved.
+On reset, before any serial traffic, `code.py` shows the title, **CUB SCOUT BUTTON
+MASH**, flashing one word at a time in two columns, green for P1 and pink for P2. That
+proves CircuitPython, the library, the HUB75 wiring and the panel, with the Teensy not
+involved. The title gives way as soon as the Teensy sends anything. The words, timings and
+the small font the title is drawn in (needed because `BUTTON` is too long for the built-in
+one) are at the top of `code.py`.
 
 The handshake is Teensy-driven: it sends `#CONREADY` and waits in `DisplayReadyWait`,
-and the Portal answers `#DSPREADY`. A panel that scrolls while the Teensy never advances
+and the Portal answers `#DSPREADY`. A panel that stays on the title while the Teensy never advances
 is a serial-link fault — check the TX/RX crossover first. Once they are talking, the
 debug `DISPLAY` screen sends every protocol message in turn.
 

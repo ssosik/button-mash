@@ -15,6 +15,7 @@ import displayio
 import framebufferio
 import rgbmatrix
 import terminalio
+import time
 from adafruit_display_text import label
 
 # --- Configuration ---------------------------------------------------------
@@ -37,6 +38,34 @@ SCROLL_PERIOD = 125
 CHAR_CELL = 6
 
 SPLASH_LEFT_LIMIT = -55
+
+# Title shown from power-on until the Teensy first speaks, one word at a time.
+TITLE_WORDS = ("CUB", "SCOUT", "BUTTON", "MASH")
+TITLE_WORD_MS = 700  # each word lit
+TITLE_GAP_MS = 150  # dark between words
+TITLE_REST_MS = 700  # dark after the last word, before it starts again
+
+# The title's own font. terminalio fits five letters to a 32-pixel column and
+# BUTTON has six, so these are narrower: 7 rows tall, '#' lit, one column of
+# space between letters. Only the letters the title uses are here.
+TITLE_FONT = {
+    "A": (".##.", "#..#", "#..#", "####", "#..#", "#..#", "#..#"),
+    "B": ("###.", "#..#", "#..#", "###.", "#..#", "#..#", "###."),
+    "C": (".###", "#...", "#...", "#...", "#...", "#...", ".###"),
+    "H": ("#..#", "#..#", "#..#", "####", "#..#", "#..#", "#..#"),
+    "M": ("#...#", "##.##", "#.#.#", "#...#", "#...#", "#...#", "#...#"),
+    "N": ("#..#", "##.#", "##.#", "#.##", "#.##", "#..#", "#..#"),
+    "O": (".##.", "#..#", "#..#", "#..#", "#..#", "#..#", ".##."),
+    "S": (".###", "#...", "#...", ".##.", "...#", "...#", "###."),
+    "T": ("###", ".#.", ".#.", ".#.", ".#.", ".#.", ".#."),
+    "U": ("#..#", "#..#", "#..#", "#..#", "#..#", "#..#", ".##."),
+}
+TITLE_FONT_HEIGHT = 7
+
+# Left edge of each player's title column, mirrored about the panel's centre
+# like the score columns.
+TITLE_P1_X = 5
+TITLE_P2_X = MATRIX_WIDTH - TITLE_P1_X - TITLE_FONT_HEIGHT
 
 # --- Panel setup -----------------------------------------------------------
 
@@ -93,11 +122,61 @@ def save_highscore(score):
         return False
 
 
+# --- Title -----------------------------------------------------------------
+
+
+def title_pixels(word):
+    """The lit pixels of `word` laid flat, as (along, row) pairs, and its length.
+
+    `along` runs in reading order from the first letter; `row` 0 is the top of
+    the letters.
+    """
+    lit = []
+    along = 0
+    for letter in word:
+        glyph = TITLE_FONT[letter]
+        for row, line in enumerate(glyph):
+            for col, cell in enumerate(line):
+                if cell == "#":
+                    lit.append((along + col, row))
+        along += len(glyph[0]) + 1
+    return lit, along - 1
+
+
+def draw_title_word(p1_bitmap, p2_bitmap, word):
+    """Draw `word` into both title columns, centred along each.
+
+    Turned the same way as the score columns: P1's reads downward with the tops
+    of the letters toward the panel's right edge, P2's reads upward with them
+    toward the left, so each player sees it upright from their own side.
+    """
+    p1_bitmap.fill(0)
+    p2_bitmap.fill(0)
+    if not word:
+        return
+    lit, length = title_pixels(word)
+    start = (MATRIX_HEIGHT - length) // 2
+    last_row = TITLE_FONT_HEIGHT - 1
+    for along, row in lit:
+        p1_bitmap[last_row - row, start + along] = 1
+        p2_bitmap[row, MATRIX_HEIGHT - 1 - (start + along)] = 1
+
+
+def title_frames():
+    """The title as (word, ms) pairs; a word of None is a dark pause."""
+    frames = []
+    for word in TITLE_WORDS:
+        frames.append((word, TITLE_WORD_MS))
+        frames.append((None, TITLE_GAP_MS))
+    frames[-1] = (None, TITLE_REST_MS)
+    return frames
+
+
 # --- Scenes ----------------------------------------------------------------
 
 
 class Scenes:
-    """The two things this panel can show: the attract splash, and the score."""
+    """What this panel can show: the title, the attract splash, and the score."""
 
     def __init__(self):
         odb = displayio.OnDiskBitmap(SPLASH_BITMAP)
@@ -126,7 +205,21 @@ class Scenes:
         self.players.append(self.p1)
         self.players.append(self.p2)
 
+        self.title = displayio.Group()
+        self.title_bitmaps = []
+        for x, color in ((TITLE_P1_X, P1_COLOR), (TITLE_P2_X, P2_COLOR)):
+            bitmap = displayio.Bitmap(TITLE_FONT_HEIGHT, MATRIX_HEIGHT, 2)
+            palette = displayio.Palette(2)
+            palette[0] = 0x000000
+            palette[1] = color
+            self.title.append(displayio.TileGrid(bitmap, pixel_shader=palette, x=x))
+            self.title_bitmaps.append(bitmap)
+        self.title_frames = title_frames()
+        self.title_index = 0
+        self.title_since = 0
+
         self.showing_splash = False
+        self.showing_title = False
         self.scrolling = True
         self.frame = 0
 
@@ -154,10 +247,32 @@ class Scenes:
         self.p2.color = P2_COLOR if p2_color is None else p2_color
 
     def show_splash(self, showing):
-        if showing == self.showing_splash:
+        if showing == self.showing_splash and not self.showing_title:
             return
         self.showing_splash = showing
+        self.showing_title = False
         display.root_group = self.splash if showing else self.players
+
+    def show_title(self):
+        self.showing_splash = False
+        self.showing_title = True
+        self.title_index = 0
+        self.title_since = time.monotonic_ns() // 1000000
+        self._draw_title_frame()
+        display.root_group = self.title
+
+    def _draw_title_frame(self):
+        word, _ = self.title_frames[self.title_index]
+        draw_title_word(self.title_bitmaps[0], self.title_bitmaps[1], word)
+
+    def _tick_title(self):
+        now = time.monotonic_ns() // 1000000
+        _, hold = self.title_frames[self.title_index]
+        if now - self.title_since < hold:
+            return
+        self.title_since = now
+        self.title_index = (self.title_index + 1) % len(self.title_frames)
+        self._draw_title_frame()
 
     def _scroll_down(self, line):
         line.y -= 1
@@ -170,6 +285,10 @@ class Scenes:
             line.y = -line.bounding_box[2]
 
     def tick(self):
+        if self.showing_title:
+            self._tick_title()
+            return
+
         if self.showing_splash:
             self.mole.x -= 1
             if self.mole.x < SPLASH_LEFT_LIMIT:
@@ -369,6 +488,10 @@ def handle_line(scenes, line):
 
     verb, _, args = line.partition(b":")
 
+    # The title holds only until the Teensy first speaks.
+    if scenes.showing_title:
+        scenes.show_splash(False)
+
     if verb not in KEEPS_TARGET_COLORS:
         scenes.set_colors()
 
@@ -394,7 +517,7 @@ def handle_line(scenes, line):
 uart = busio.UART(board.TX, board.RX, baudrate=BAUDRATE, timeout=0)
 state = {"highscore": load_highscore()}
 scenes = Scenes()
-scenes.set_text("Whack A Mole Attack      ", "Whack A Mole Attack      ")
+scenes.show_title()
 
 rx_buffer = b""
 
