@@ -82,6 +82,31 @@ def check_ribbon(doc, p1, p2):
     return bad
 
 
+def check_chain_order(doc, p1, p2):
+    """The "Chain order must match Config.h" table lists each cap's switch pin.
+
+    It went stale through a remap without anything noticing, which is the
+    reason it is checked now.
+    """
+    rows = {
+        "1\u20135": ", ".join(p1[:5]),
+        "6\u201310": ", ".join(p2[:5]),
+        "\u2014": f"{p1[5]} \u00b7 {p2[5]}",
+    }
+    bad = []
+    for first, want in rows.items():
+        m = re.search(
+            r'<tr><td class="m">' + first + r"</td><td>.*?</td><td class=\"m\">[^<]*</td>"
+            r'<td class="m">([^<]*)</td></tr>',
+            doc,
+        )
+        if not m:
+            bad.append(f"  chain order table: could not find the {first!r} row")
+        elif m.group(1).strip() != want:
+            bad.append(f"  chain order {first}: doc says {m.group(1)!r}, Config.h says {want!r}")
+    return bad
+
+
 def main():
     p1, p2, pixel = config_pins(CFG.read_text())
     doc = DOC.read_text()
@@ -109,11 +134,12 @@ def main():
         bad.append(f"  level shifter 1A: doc says pin {m.group(1)}, kPixelDataPin is {pixel}")
 
     bad += check_ribbon(doc, p1, p2)
+    bad += check_chain_order(doc, p1, p2)
 
     if bad:
         print("docs/wiring.html has drifted from Config.h:\n" + "\n".join(bad))
         return 1
-    print(f"pins OK \u2014 P1 {p1}  P2 {p2}  pixel {pixel}  (+ ribbon table)")
+    print(f"pins OK \u2014 P1 {p1}  P2 {p2}  pixel {pixel}  (+ ribbon and chain tables)")
     return 0
 
 

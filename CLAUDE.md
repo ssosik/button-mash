@@ -13,6 +13,8 @@ make upload                   # flash the table (defaults: GPIO buttons + WS2812
 make lint CLANG_FORMAT="uvx --from clang-format==18.1.8 clang-format" RUFF="uvx ruff"
 make check-pins               # docs/wiring.html pin tables vs Config.h
 make wiring-pdf               # rebuild docs/mole-table-wiring.pdf (needs Chrome)
+make controller-board         # regenerate the controller PCB; fails on any ERC/DRC/parity issue
+make board-render             # README 3D renders of both boards (kicad-cli)
 ```
 
 Neither clang-format nor ruff is necessarily installed; the `uvx` forms above match CI
@@ -38,6 +40,12 @@ PIXELS=0` builds for version 1's resistor ladder and dome lamps, kept compiling 
   *fragment* (no `<html>`/`<head>`); `make-print-html.py` wraps it and generates the TOC.
 - `hardware/button-board/`: `gen-netlist.py` is the single source of truth for the PCB;
   the schematic and netlist are generated from it, and the `.kicad_pcb` is hand-laid.
+- `hardware/controller-board/`: the controller as a PCB, generated end to end:
+  `gen-netlist.py` (imports the button board's harness map and reads `Config.h`) →
+  `gen-schematic.py` → `gen-pcb.py`. The last runs under KiCad's bundled Python
+  (`KICAD_PY` in the Makefile) for `pcbnew`. `make controller-board` regenerates and must
+  pass ERC, DRC and schematic parity with zero violations; edit the generators, never the
+  KiCad files. Symbol/footprint links use UUIDs derived from reference designators.
 
 ## Firmware conventions
 

@@ -609,9 +609,9 @@ h3.sub-h{margin-top:26px;margin-bottom:10px}
   <div class="tw"><table>
     <thead><tr><th class="m">Position</th><th>Button</th><th class="m">Pixels</th><th class="m">Switch pin</th></tr></thead>
     <tbody>
-      <tr><td class="m">1–5</td><td>P1 mole caps — blue, red, white, green, yellow</td><td class="m">0–59</td><td class="m">2, 3, 4, 5, 9</td></tr>
-      <tr><td class="m">6–10</td><td>P2 mole caps — blue, red, white, green, yellow</td><td class="m">60–119</td><td class="m">11, 12, 14, 15, 16</td></tr>
-      <tr><td class="m">—</td><td>P1 start · P2 start <span class="chip">no lamp</span></td><td class="m">none</td><td class="m">22 · 25</td></tr>
+      <tr><td class="m">1–5</td><td>P1 mole caps — blue, red, white, green, yellow</td><td class="m">0–59</td><td class="m">9, 11, 12, 24, 25</td></tr>
+      <tr><td class="m">6–10</td><td>P2 mole caps — blue, red, white, green, yellow</td><td class="m">60–119</td><td class="m">27, 28, 29, 30, 31</td></tr>
+      <tr><td class="m">—</td><td>P1 start · P2 start <span class="chip">no lamp</span></td><td class="m">none</td><td class="m">26 · 32</td></tr>
     </tbody>
   </table></div>
 
@@ -696,6 +696,12 @@ h3.sub-h{margin-top:26px;margin-bottom:10px}
   <p>73 × 100 mm stripboard, strips running horizontally, Teensy socketed on female headers so
   it can come out. Positions below are indicative — check them against your own board before
   cutting anything.</p>
+
+  <p>There is also a PCB of this board in <code>hardware/controller-board/</code>: the same
+  parts and the same pinout, generated from a netlist that reads <code>Config.h</code>, with no
+  cuts and no jumpers. The harness, the serial cable and the power lead plug into it unchanged.
+  It has passed ERC, DRC and schematic parity but has not yet been fabricated; the stripboard
+  below is what is in the table.</p>
 
   <figure>
     <div class="scroll">
