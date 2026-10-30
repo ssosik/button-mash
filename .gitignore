@@ -1,0 +1,29 @@
+build/
+__pycache__/
+*.pyc
+
+# arduino-cli build artifacts if compiled in place
+*.elf
+*.hex
+*.eep
+*.lst
+*.sym
+
+# macOS
+.DS_Store
+
+# Claude Code session state
+claude.resume
+
+# editor swap files
+*.swp
+*.swo
+*~
+
+# KiCad: lock files, auto-backups, and per-user project state
+*.lck
+*-backups/
+*.kicad_prl
+
+# VS Code Local History
+.history/

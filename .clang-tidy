@@ -1,0 +1,27 @@
+# Arduino/Teensy firmware lint profile.
+#
+# clang-tidy cannot see the Teensy core headers without a compile database, so
+# this is aimed at the checks that work on the project's own translation units.
+# Run with `make tidy` (see Makefile) which generates compile_commands.json.
+Checks: >
+  -*,
+  bugprone-*,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-pro-type-member-init,
+  misc-*,
+  modernize-use-nullptr,
+  modernize-use-override,
+  performance-*,
+  readability-braces-around-statements,
+  readability-const-return-type,
+  readability-implicit-bool-conversion,
+  readability-inconsistent-declaration-parameter-name,
+  readability-redundant-*,
+  readability-simplify-boolean-expr,
+  -bugprone-easily-swappable-parameters,
+  -misc-non-private-member-variables-in-classes,
+  -readability-magic-numbers
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*/firmware/.*'
+FormatStyle: file

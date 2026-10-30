@@ -1,0 +1,24 @@
+# CircuitPython runs a MicroPython-derived interpreter; target the oldest syntax
+# level CircuitPython 9 reliably supports.
+target-version = "py38"
+line-length = 100
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+]
+ignore = [
+    # CircuitPython has no f-string performance concerns worth this churn, and
+    # .format() reads better in the display-string tables.
+    "UP032",
+]
+
+[lint.per-file-ignores]
+# code.py imports board-specific modules that only exist on the device.
+"display/code.py" = ["E402"]
