@@ -277,6 +277,12 @@ Matrix Portal began answering the handshake and the Teensy stopped sitting in
 - **[hardware/button-board/](hardware/button-board/)** — the button board as a KiCad PCB,
   with its schematic as a [PDF](hardware/button-board/button-board.pdf).
 
+![3D render of the button board: ten 6-pin JST-XH cap sockets in two rows, the J14 5 V screw terminal and 1000 µF bulk capacitor, the two start-button sockets, and the 14-way harness socket to the controller](docs/button-board-3d.jpg)
+
+The button board, rendered from the KiCad layout (`make board-render`). Each cap plugs
+into one of J1–J10 and each start button into J11 or J12. Power arrives at the J14 screw
+terminal, and J13 carries every switch line and the pixel data back to the controller.
+
 ## Pin map
 
 Authoritative version is `firmware/WhackAMole/Config.h`; `make check-pins` fails if the

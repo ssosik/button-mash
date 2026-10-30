@@ -25,9 +25,10 @@ PIXELS  ?= 1
 SKETCH  := firmware/WhackAMole
 BUILD   := build
 CHROME  := /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+KICAD_CLI ?= /Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli
 SOURCES := $(wildcard firmware/WhackAMole/*.cpp firmware/WhackAMole/*.h) $(SKETCH)/WhackAMole.ino
 
-.PHONY: all build matrix upload monitor format format-check tidy lint-py lint check-pins stl wiring-pdf test clean
+.PHONY: all build matrix upload monitor format format-check tidy lint-py lint check-pins stl wiring-pdf board-render test clean
 
 all: build
 
@@ -149,6 +150,14 @@ stl:
 ## Render docs/wiring.html to a PDF. Needs Google Chrome.
 ## Chrome ignores --print-to-pdf-no-header; --no-pdf-header-footer is the flag
 ## that actually suppresses the date/title/URL stamps.
+## The README's 3D view of the button board. KiCad 10 lacks the MX126 terminal
+## block's model, so the board file points J14 at the Phoenix MKDS 1,5 (same
+## 5 mm pitch, near-identical body) to keep it from rendering as bare pads.
+board-render:
+	"$(KICAD_CLI)" pcb render --quality high --perspective --rotate '-40,0,-25' \
+	  --background opaque -w 1600 -h 1000 \
+	  -o docs/button-board-3d.jpg hardware/button-board/button-board/button-board.kicad_pcb
+
 wiring-pdf:
 	python3 docs/make-print-html.py docs/wiring.html $(BUILD)/wiring-print.html
 	"$(CHROME)" --headless --disable-gpu --no-sandbox \
