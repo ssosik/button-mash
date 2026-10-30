@@ -9,20 +9,29 @@ Original idea by https://github.com/DIYTechBros/ButtonSmack / https://www.youtub
 
 Use a Teensy 4 to control the game, sending serial messages to a Matrix Portal for driving the graphics on a 32x32 LED Panel.
 
+The table was built for a Cub Scout pack and plays as **Cub Scout Button Mash**: a medley of
+five short games — whack-a-mole, colour finding, a chase around the ring, a colour puzzle,
+and Simon — for one or two players. See [Game modes](#game-modes).
+
+This is the second version of the table. The first ran on a resistor-ladder input, plain
+dome lamps and a battery pack; its retrospective is at [the end](#version-1-retrospective).
+The firmware still builds for both.
+
 # Components
 
 - [Teensy 4.1](https://www.pjrc.com/store/teensy41.html)
 - [32x32 Adafruit LED Matrix](https://www.adafruit.com/product/2026)
 - [Adafruit Matrix Portal S3](https://www.adafruit.com/product/5778)
-- USB-C power bank + a CH224K PD trigger board configured for 5 V
+- USB-C power bank + an HUSB238 PD trigger board configured for 5 V
   - Replaces the 2× 21700 pack and the XL4015 buck converter, both now removed from the
     design. The pack ran 8.4 V down to 6.0 V, below the XL4015's 8 V input floor for most
     of a discharge; once the current budget was corrected the table turned out to fit
     inside a 5 V / 3 A PD contract, so the converter went away rather than being worked
     around. [The wiring reference](docs/mole-table-wiring.pdf) records the decision, what
     it costs, and how to reverse it.
-- 10 60mm dome LED push-buttons
+- 10 60mm dome push-buttons, each with a 12-pixel WS2812 ring in the cap
 - 2 arcade buttons (player start)
+- 74AHCT125 level shifter for the pixel data line
 
 # Parts
 
@@ -30,8 +39,9 @@ Use a Teensy 4 to control the game, sending serial messages to a Matrix Portal f
 - spade terminals + quick connectors
 - wire
 - connectors
-- 10K resistors
-- M/F barrel connector
+- 330 Ω resistors (one per cap) and a 1000 µF capacitor
+- JST-XH connectors and crimp contacts (parts lists in `docs/`)
+- 10K resistors and an M/F barrel connector (version 1 only)
 - 2x4s
 - 1/2 inch finished plywood
 - a few 3D printed pieces
@@ -40,8 +50,11 @@ Use a Teensy 4 to control the game, sending serial messages to a Matrix Portal f
 
 ```
 firmware/WhackAMole/   Teensy 4.1 sketch (Arduino/Teensyduino)
-display/               CircuitPython for the Matrix Portal S3
-hardware/              3D printed bushings
+firmware/test/         Host-side tests: every game mode, no Teensy needed
+display/               CircuitPython for the Matrix Portal S3, plus a host panel tester
+docs/                  Wiring reference (HTML source + PDF), parts lists, doc tooling
+hardware/              Button bushings (STL), the WS2812 ring carrier (OpenSCAD),
+                       and the button board PCB (KiCad, generated from Python)
 ```
 
 Copying `display/` onto the CIRCUITPY drive is most of it, but not all of it —
@@ -76,8 +89,9 @@ Input and lamp hardware are selected at build time in `Config.h`:
 #define WAM_LIGHTS_PIXELS 0   // 0 = digital dome lamps,     1 = WS2812 in the caps
 ```
 
-Both paths are kept compiling by CI, so the original wiring keeps working while a
-rebuild is in progress.
+`Config.h` still defaults to version 1's hardware. **The current table needs both set
+to 1**, which the Makefile does without editing the file: `make upload GPIO=1 PIXELS=1`.
+CI compiles all four combinations so neither path rots.
 
 # Building
 
@@ -92,11 +106,11 @@ arduino-cli core install teensy:avr \
 Then:
 
 ```sh
-make build     # compile the configuration selected in Config.h
-make matrix    # compile all four input/lamp combinations
-make upload    # compile and flash a connected Teensy
-make lint      # clang-format check + ruff
-make test      # play every game mode on this computer; no Teensy needed
+make build                    # compile the configuration selected in Config.h
+make matrix                   # compile all four input/lamp combinations
+make upload GPIO=1 PIXELS=1   # compile and flash a connected Teensy (current table)
+make lint                     # clang-format check + ruff + pin-table check
+make test                     # play every game mode on this computer; no Teensy needed
 ```
 
 # Flashing the Matrix Portal
@@ -114,8 +128,7 @@ Double-tap **RESET**; a bootloader drive appears. Drag the UF2 for this board on
 from [circuitpython.org](https://circuitpython.org/board/adafruit_matrixportal_s3/).
 It reboots as `CIRCUITPY`.
 
-`code.py` uses `display.root_group` and `OnDiskBitmap(filename)`, so it needs
-**CircuitPython 9 or later**; 10.x is what it is developed against. Nothing in it
+`code.py` uses `display.root_group`, so it needs **CircuitPython 9 or later**; 10.x is what it is developed against. Nothing in it
 needs porting for 10.
 
 ## 2. The one library
@@ -253,28 +266,42 @@ Matrix Portal began answering the handshake and the Teensy stopped sitting in
 | CALIBRATE | Walks you through pressing every button, then prints a paste-ready `kLadderThresholds` table and a safe tolerance. Not needed once the buttons are on GPIOs. |
 | DISPLAY | Sends every protocol message in turn so `code.py` can be checked against the full vocabulary without playing a round. |
 
-# Circuit schematic
+# Circuit
 
-TODO
+- **[docs/mole-table-wiring.pdf](docs/mole-table-wiring.pdf)** — the full wiring
+  reference: power topology and current budget, the controller stripboard, the button
+  board, the per-cap connectors, and build order. `docs/wiring.html` is its source;
+  `make wiring-pdf` rebuilds it.
+- **[hardware/button-board/](hardware/button-board/)** — the button board as a KiCad PCB,
+  with its schematic as a [PDF](hardware/button-board/button-board.pdf).
 
 ## Pin map
 
-Authoritative version is `firmware/WhackAMole/Config.h`.
+Authoritative version is `firmware/WhackAMole/Config.h`; `make check-pins` fails if the
+wiring reference disagrees with it.
 
 | Function | Pins |
 | --- | --- |
 | Display link (Serial1) | 0 (RX), 1 (TX) |
 | Reserved for audio | 6, 7, 10, 18, 19, 20, 21, 23 |
-| Analog ladder in | 27 (P1), 38 (P2) |
-| Dome lamps | 28-32 (P1), 33-37 (P2) |
-| GPIO buttons (after rewire) | 2, 3, 4, 5, 9, 22 (P1) / 11, 12, 14, 15, 16, 25 (P2) |
-| WS2812 data (after rewire) | 24 |
 | Floating pin, PRNG seed | 17 |
+| **Current table** (`WAM_INPUT_GPIO=1`, `WAM_LIGHTS_PIXELS=1`) | |
+| Buttons, one GPIO each (B R W G Y, start) | 9, 11, 12, 24, 25, 26 (P1) / 27, 28, 29, 30, 31, 32 (P2) |
+| WS2812 data, both players on one chain | 8 |
+| **Version 1** (`WAM_INPUT_GPIO=0`, `WAM_LIGHTS_PIXELS=0`) | |
+| Analog ladder in | 27 (P1), 38 (P2) |
+| Dome lamps | 28–32 (P1), 37–33 (P2) |
 
 The display link was moved off `Serial2`. Pin 7 is `Serial2` RX **and** the I2S data pin
 used by both candidate audio designs, so `Serial2` and sound cannot coexist.
 
-# What worked well
+# Version 1 retrospective
+
+Written after the first table's first outing. Most of what it asks for is what version 2
+became: a 6-pin JST-XH per cap, buttons on their own GPIOs, WS2812 rings in the caps, and
+a USB-C power bank in place of the batteries and buck converter.
+
+## What worked well
 
 - The Teensy is an awesome little computer. Easy to code, super fast, really stable, and overall just worked all the time
 - Using switches in series with 10K resistors in between is an awesome way to read in multiple distinct user inputs while only using one analog pin
@@ -285,7 +312,7 @@ used by both candidate audio designs, so `Serial2` and sound cannot coexist.
   the pack sat below the converter's rated input floor for most of its discharge — see
   the decision record in the wiring reference)
 
-# What I would do different
+## What I would do different
 
 - The LEDs on the dome buttons are not great, just not bright. The DIY TechBros design replaced the built-in resistor to improve brightness, but it didn't make much of an improvement for me.
 - The wiring scheme I came up with worked but it was ugly. If I were going to rewire this, I'd use a 4-pin JST connector and ribbon cable per LED button. The inline resistors would need to be moved to the perf board.
@@ -294,25 +321,27 @@ used by both candidate audio designs, so `Serial2` and sound cannot coexist.
   to every cap anyway, one more conductor per button buys real simultaneous-press handling
   and retires the threshold table entirely.
 
-# Improvements
+## Improvements
 
 - SOUNDS! There is an audio break-out board for the Teensy, adding some sounds would really make the game have an arcade feel
 - Better button LEDs. I may try to cram a few WS2812B LEDs into the Dome button housing
 
-## Notes for the rewire
+## Notes from the rewire
+
+The wiring reference has the details; these are the decisions that shaped it.
 
 - Drive WS2812s with **WS2812Serial**, not Adafruit NeoPixel or FastLED. The bit-banging
   drivers disable interrupts for the length of a frame, which jitters the display link and
   will audibly glitch audio.
 - The Teensy 4.1 is 3.3 V logic and WS2812Bs want 0.7×VDD on data. Put a **74AHCT125**
   between the Teensy and the first pixel. This is the usual cause of flaky NeoPixel builds.
-- 330–470 Ω in series at the first pixel, 1000 µF across the 5 V rail.
+- A 330 Ω resistor in series with DIN inside **every** cap, so all ten buttons are
+  interchangeable, and 1000 µF across the 5 V rail.
 - 10 caps × 12-pixel rings = 120 pixels, **~7.2 A** at full white — far past what the
   supply can give. Only two caps are lit during play, but the debug ALL-ON screen is the
-  true worst case, so `kPixelBrightness` is capped at 64/255 (~1.8 A). Inject power at
-  both ends of the chain rather than feeding it all through the first connector. The two
-  start buttons have no lamp and are not in the pixel chain.
-- Per-cap connector: +5 V, GND, DIN, DOUT, SW, SW-GND. Keep the switch return separate
+  true worst case, so `kPixelBrightness` is capped at 64/255 (~1.8 A). The two start
+  buttons have no lamp and are not in the pixel chain.
+- Per-cap connector, 6-pin JST-XH: +5 V, GND, DIN, DOUT, SW, SW-GND. Keep the switch return separate
   from the LED return — a ring at full white puts 720 mA down that ground, and sharing it
   offsets the input the Teensy is reading. The start buttons need two conductors only.
 - Full topology, current budget and build order: [docs/mole-table-wiring.pdf](docs/mole-table-wiring.pdf).
@@ -327,5 +356,7 @@ assembly steps are in the file. The `assert`s at the top will refuse to render i
 ring is too tall for the 4mm cavity — measure `ring_height` before printing.
 
 # Table design
+
+From version 1; the playfield and frame carried over unchanged.
 
 I started from the playfield (16x36 inches) and then just built a table from and legs underneath that. I needed to 3d print a few spacer/bushings so that the buttons were snug in the holes I cut (I didn't have a perfectly-sized hole saw). I also 3d printed 21700 battery holders. The battery holders and perf-board are just screwed to the underside with wood screws. The PortalMatrix is piggy-backed onto the back of the LED panel on the 2x10 socket connector. The LED panel is inset into the middle of the playfield; I added supports underneath to keep it flush with the playfield surface. I also added a 3d-printed bezel around the LED panel in an attempt to make it look like a mole hill and to discourage players from bonking it.
