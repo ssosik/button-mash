@@ -697,6 +697,12 @@ h3.sub-h{margin-top:26px;margin-bottom:10px}
   it can come out. Positions below are indicative — check them against your own board before
   cutting anything.</p>
 
+  <p>There is also a PCB of this board in <code>hardware/controller-board/</code>: the same
+  parts and the same pinout, generated from a netlist that reads <code>Config.h</code>, with no
+  cuts and no jumpers. The harness, the serial cable and the power lead plug into it unchanged.
+  It has passed ERC, DRC and schematic parity but has not yet been fabricated; the stripboard
+  below is what is in the table.</p>
+
   <figure>
     <div class="scroll">
       <svg viewBox="0 0 736 590" role="img" aria-label="Hole-by-hole stripboard map for the controller board, 27 columns by 35 rows with horizontal strips. The Teensy occupies columns 11 and 17 across rows 11 to 34 with a cut down its centreline on every row. The 74AHCT125 occupies columns 7 and 10 across rows 4 to 10 with its own centreline cut. A 1x14 ribbon header sits in column 3 across rows 21 to 34, with isolating cuts on rows 22 and 25. Rows 1 and 2 are the five volt and ground rails.">

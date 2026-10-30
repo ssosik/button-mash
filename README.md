@@ -54,7 +54,8 @@ firmware/test/         Host-side tests: every game mode, no Teensy needed
 display/               CircuitPython for the Matrix Portal S3, plus a host panel tester
 docs/                  Wiring reference (HTML source + PDF), parts lists, doc tooling
 hardware/              Button bushings (STL), the WS2812 ring carrier (OpenSCAD),
-                       and the button board PCB (KiCad, generated from Python)
+                       and both PCBs, button board and controller (KiCad, generated
+                       from Python)
 ```
 
 Copying `display/` onto the CIRCUITPY drive is most of it, but not all of it —
@@ -282,6 +283,15 @@ Matrix Portal began answering the handshake and the Teensy stopped sitting in
 The button board, rendered from the KiCad layout (`make board-render`). Each cap plugs
 into one of J1–J10 and each start button into J11 or J12. Power arrives at the J14 screw
 terminal, and J13 carries every switch line and the pixel data back to the controller.
+
+- **[hardware/controller-board/](hardware/controller-board/)** — the controller
+  stripboard as a PCB: the socketed Teensy, the 74AHCT125, the harness header, the serial
+  link to the Portal and the power terminal, with its schematic as a
+  [PDF](hardware/controller-board/controller-board.pdf). Generated end to end from a
+  netlist that reads `Config.h`; `make controller-board` rebuilds it and holds it to ERC,
+  DRC and schematic parity. Not yet fabricated — the stripboard is what is in the table.
+
+![3D render of the controller board: the Teensy 4.1's two female header rows, the 14-pin harness header beside them, the 74AHCT125 socket and serial connector top left, and the 5 V screw terminal and bulk capacitor top right](docs/controller-board-3d.jpg)
 
 ## Pin map
 

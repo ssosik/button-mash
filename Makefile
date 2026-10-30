@@ -26,9 +26,12 @@ SKETCH  := firmware/WhackAMole
 BUILD   := build
 CHROME  := /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 KICAD_CLI ?= /Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli
+# The Python inside KiCad, the only one that can import pcbnew.
+KICAD_PY ?= /Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/3.9/bin/python3
+CTRL    := hardware/controller-board
 SOURCES := $(wildcard firmware/WhackAMole/*.cpp firmware/WhackAMole/*.h) $(SKETCH)/WhackAMole.ino
 
-.PHONY: all build matrix upload monitor format format-check tidy lint-py lint check-pins stl wiring-pdf board-render test clean
+.PHONY: all build matrix upload monitor format format-check tidy lint-py lint check-pins stl wiring-pdf board-render controller-board test clean
 
 all: build
 
@@ -150,13 +153,29 @@ stl:
 ## Render docs/wiring.html to a PDF. Needs Google Chrome.
 ## Chrome ignores --print-to-pdf-no-header; --no-pdf-header-footer is the flag
 ## that actually suppresses the date/title/URL stamps.
-## The README's 3D view of the button board. KiCad 10 lacks the MX126 terminal
-## block's model, so the board file points J14 at the Phoenix MKDS 1,5 (same
-## 5 mm pitch, near-identical body) to keep it from rendering as bare pads.
+## The README's 3D views of both boards. KiCad 10 lacks the MX126 terminal
+## block's model, so both boards point their terminal at the Phoenix MKDS 1,5
+## (same 5 mm pitch, near-identical body) to keep it from rendering as bare pads.
 board-render:
 	"$(KICAD_CLI)" pcb render --quality high --perspective --rotate '-40,0,-25' \
 	  --background opaque -w 1600 -h 1000 \
 	  -o docs/button-board-3d.jpg hardware/button-board/button-board/button-board.kicad_pcb
+	"$(KICAD_CLI)" pcb render --quality high --perspective --rotate '-40,0,-25' \
+	  --background opaque -w 1600 -h 1000 \
+	  -o docs/controller-board-3d.jpg $(CTRL)/controller-board/controller-board.kicad_pcb
+
+## Regenerate the controller board from its netlist, then hold it to ERC, DRC
+## and schematic-to-board parity. Any violation fails the target.
+controller-board:
+	python3 $(CTRL)/gen-schematic.py
+	"$(KICAD_PY)" $(CTRL)/gen-pcb.py
+	"$(KICAD_CLI)" sch erc --severity-all --exit-code-violations \
+	  -o $(BUILD)/controller-erc.rpt $(CTRL)/controller-board/controller-board.kicad_sch
+	"$(KICAD_CLI)" pcb drc --schematic-parity --refill-zones --save-board \
+	  --severity-all --exit-code-violations \
+	  -o $(BUILD)/controller-drc.rpt $(CTRL)/controller-board/controller-board.kicad_pcb
+	"$(KICAD_CLI)" sch export pdf -o $(CTRL)/controller-board.pdf \
+	  $(CTRL)/controller-board/controller-board.kicad_sch
 
 wiring-pdf:
 	python3 docs/make-print-html.py docs/wiring.html $(BUILD)/wiring-print.html
