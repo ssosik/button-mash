@@ -14,14 +14,14 @@ FQBN    := teensy:avr:teensy41
 CLANG_FORMAT ?= clang-format
 RUFF    ?= ruff
 
-# Which hardware the firmware is built for. Defaults match Config.h, which is
-# still the original table: resistor ladder and plain dome lamps. Override on
-# the command line for the rebuilt hardware:
+# Which hardware the firmware is built for. Defaults match Config.h: the
+# rebuilt table, one GPIO per button and WS2812 caps. Override on the command
+# line for version 1's resistor ladder and plain dome lamps:
 #
-#     make upload GPIO=1 PIXELS=1
+#     make upload GPIO=0 PIXELS=0
 #
-GPIO    ?= 0
-PIXELS  ?= 0
+GPIO    ?= 1
+PIXELS  ?= 1
 SKETCH  := firmware/WhackAMole
 BUILD   := build
 CHROME  := /Applications/Google Chrome.app/Contents/MacOS/Google Chrome

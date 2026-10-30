@@ -9,7 +9,7 @@ HUB75 panel. README.md is the user-facing guide; this file covers how to work on
 ```sh
 make test                     # host tests: every game mode + the lamp dance, ASan/UBSan. Run after any firmware change.
 make matrix                   # compile all four hardware configurations; must be warning-free
-make upload GPIO=1 PIXELS=1   # flash the real table (GPIO buttons + WS2812 caps)
+make upload                   # flash the table (defaults: GPIO buttons + WS2812 caps)
 make lint CLANG_FORMAT="uvx --from clang-format==18.1.8 clang-format" RUFF="uvx ruff"
 make check-pins               # docs/wiring.html pin tables vs Config.h
 make wiring-pdf               # rebuild docs/mole-table-wiring.pdf (needs Chrome)
@@ -19,8 +19,8 @@ Neither clang-format nor ruff is necessarily installed; the `uvx` forms above ma
 (clang-format 18). CI (`.github/workflows/build.yml`) runs matrix, format, ruff on the whole
 repo, check-pins, and `make test CXX=clang++`.
 
-**`Config.h` defaults to version 1 hardware (`0 0`). The real table is `GPIO=1 PIXELS=1`.**
-Always pass both when flashing. `make upload` with no flags flashes the wrong build.
+`Config.h` and the Makefile default to the real table (`GPIO=1 PIXELS=1`). `GPIO=0
+PIXELS=0` builds for version 1's resistor ladder and dome lamps, kept compiling by CI.
 
 ## Layout
 

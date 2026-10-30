@@ -11,19 +11,20 @@
 
 // --- Build-time hardware selection -----------------------------------------
 //
-// The table shipped with the original build reads all of a player's buttons
-// from one analog pin through a resistor ladder, and lights the dome caps with
-// plain digitalWrite. The rewire replaces both. Flip these to 1 as each piece
-// of hardware is actually rebuilt; the game logic above them does not change.
+// The table as rebuilt (version 2) gives every button its own GPIO and lights
+// the caps with WS2812 rings, so both default to 1. Version 1 read all of a
+// player's buttons from one analog pin through a resistor ladder and lit the
+// domes with plain digitalWrite; set both to 0 to build for that wiring. The
+// game logic above them does not change.
 //
 // Guarded so CI can build every combination via -DWAM_INPUT_GPIO=1 etc.
 // without editing this file. See `make matrix`.
 #ifndef WAM_INPUT_GPIO
-#define WAM_INPUT_GPIO 0 // 0 = analog resistor ladder, 1 = one GPIO per button
+#define WAM_INPUT_GPIO 1 // 0 = analog resistor ladder, 1 = one GPIO per button
 #endif
 
 #ifndef WAM_LIGHTS_PIXELS
-#define WAM_LIGHTS_PIXELS 0 // 0 = digitalWrite dome lamps, 1 = WS2812 in the caps
+#define WAM_LIGHTS_PIXELS 1 // 0 = digitalWrite dome lamps, 1 = WS2812 in the caps
 #endif
 
 // Bench convenience: boot straight into the debug screens instead of running

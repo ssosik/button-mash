@@ -85,12 +85,12 @@ game state of its own.
 Input and lamp hardware are selected at build time in `Config.h`:
 
 ```c
-#define WAM_INPUT_GPIO    0   // 0 = analog resistor ladder, 1 = one GPIO per button
-#define WAM_LIGHTS_PIXELS 0   // 0 = digital dome lamps,     1 = WS2812 in the caps
+#define WAM_INPUT_GPIO    1   // 0 = analog resistor ladder, 1 = one GPIO per button
+#define WAM_LIGHTS_PIXELS 1   // 0 = digital dome lamps,     1 = WS2812 in the caps
 ```
 
-`Config.h` still defaults to version 1's hardware. **The current table needs both set
-to 1**, which the Makefile does without editing the file: `make upload GPIO=1 PIXELS=1`.
+Both default to 1, the current table. For version 1's wiring, override them without
+editing the file: `make upload GPIO=0 PIXELS=0`.
 CI compiles all four combinations so neither path rots.
 
 # Building
@@ -108,7 +108,7 @@ Then:
 ```sh
 make build                    # compile the configuration selected in Config.h
 make matrix                   # compile all four input/lamp combinations
-make upload GPIO=1 PIXELS=1   # compile and flash a connected Teensy (current table)
+make upload                   # compile and flash a connected Teensy
 make lint                     # clang-format check + ruff + pin-table check
 make test                     # play every game mode on this computer; no Teensy needed
 ```
