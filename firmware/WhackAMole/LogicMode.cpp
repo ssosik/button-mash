@@ -4,7 +4,9 @@ Color LogicMode::Target() const {
   return _target < config::kLogicColorCount ? palette::kColors[_target] : colors::kOff;
 }
 
-void LogicMode::Begin(uint32_t now_ms) { NewPuzzle(now_ms); }
+void LogicMode::Begin(uint32_t now_ms) {
+  NewPuzzle(now_ms);
+}
 
 // A new target, and every cap started somewhere else, so each button needs at
 // least one press and a board is never handed over already solved.

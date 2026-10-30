@@ -8,6 +8,7 @@ build instead of waiting for a reader to notice.
 
 Checks only the facts that exist in both places. Run via `make check-pins`.
 """
+
 import re
 import sys
 from pathlib import Path
@@ -42,7 +43,7 @@ def ribbon_rows(doc):
     Laid out two positions per <tr>, so each row yields two entries.
     """
     start = doc.index('<h3 class="sub-h">Ribbon pinout</h3>')
-    seg = doc[start:doc.index("</table>", start)]
+    seg = doc[start : doc.index("</table>", start)]
     out = []
     for tr in re.findall(r"<tr>(.*?)</tr>", seg, re.S):
         cells = [
@@ -105,9 +106,7 @@ def main():
     if not m:
         bad.append("  level shifter table: could not find the 'Teensy pin <n>' cell")
     elif m.group(1) != pixel:
-        bad.append(
-            f"  level shifter 1A: doc says pin {m.group(1)}, kPixelDataPin is {pixel}"
-        )
+        bad.append(f"  level shifter 1A: doc says pin {m.group(1)}, kPixelDataPin is {pixel}")
 
     bad += check_ribbon(doc, p1, p2)
 

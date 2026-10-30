@@ -7,8 +7,12 @@
 #
 # Optional lint tools:
 #   brew install clang-format llvm ruff
+# or, with nothing installed, run them through uv at CI's versions:
+#   make lint CLANG_FORMAT="uvx --from clang-format==18.1.8 clang-format" RUFF="uvx ruff"
 
 FQBN    := teensy:avr:teensy41
+CLANG_FORMAT ?= clang-format
+RUFF    ?= ruff
 
 # Which hardware the firmware is built for. Defaults match Config.h, which is
 # still the original table: resistor ladder and plain dome lamps. Override on
@@ -113,10 +117,10 @@ monitor:
 	fi
 
 format:
-	clang-format -i $(SOURCES)
+	$(CLANG_FORMAT) -i $(SOURCES)
 
 format-check:
-	clang-format --dry-run --Werror $(SOURCES)
+	$(CLANG_FORMAT) --dry-run --Werror $(SOURCES)
 
 ## clang-tidy needs a compile database; arduino-cli emits one into the build dir.
 tidy:
@@ -124,8 +128,8 @@ tidy:
 	clang-tidy -p $(BUILD) firmware/WhackAMole/*.cpp
 
 lint-py:
-	ruff check display/
-	ruff format --check display/
+	$(RUFF) check .
+	$(RUFF) format --check .
 
 ## Fail if the wiring doc's pin table has drifted from Config.h. The doc claims
 ## to mirror it, and across three remaps it silently did not.

@@ -43,8 +43,8 @@ namespace {
 DMAMEM byte g_pixel_display[config::kPixelCount * 12];
 byte g_pixel_drawing[config::kPixelCount * 3];
 
-WS2812Serial g_chain(config::kPixelCount, g_pixel_display, g_pixel_drawing,
-                     config::kPixelDataPin, WS2812_GRB);
+WS2812Serial g_chain(config::kPixelCount, g_pixel_display, g_pixel_drawing, config::kPixelDataPin,
+                     WS2812_GRB);
 
 // Set by either player's instance, cleared by whichever one transmits. One
 // chain carries both players, so one flag is enough, and it makes a Show() with

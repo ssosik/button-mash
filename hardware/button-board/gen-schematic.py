@@ -15,6 +15,7 @@ Verify with:
     kicad-cli sch erc button-board.kicad_sch
     kicad-cli sch export netlist button-board.kicad_sch
 """
+
 import importlib.util
 import pathlib
 import re
@@ -22,9 +23,7 @@ import sys
 import uuid
 
 HERE = pathlib.Path(__file__).parent
-SYMDIR = pathlib.Path(
-    "/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols"
-)
+SYMDIR = pathlib.Path("/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols")
 
 spec = importlib.util.spec_from_file_location("netlist", HERE / "gen-netlist.py")
 NL = importlib.util.module_from_spec(spec)
@@ -43,7 +42,7 @@ SYMBOL[NL.NT1] = ("Device", "NetTie_2", 2)
 for ref in NL.HOLES:
     SYMBOL[ref] = ("Mechanical", "MountingHole", 0)
 
-STUB = 5.08             # how far the label sits off the pin
+STUB = 5.08  # how far the label sits off the pin
 
 # Pin geometry is read out of the symbol rather than modelled. Guessing it is
 # how the first attempt put every stub 2.54 mm off its pin and produced 349
@@ -60,7 +59,7 @@ def lift_symbol(lib, name):
     src = (SYMDIR / f"{lib}.kicad_sym").read_text()
     start = src.index(f'(symbol "{name}"')
     depth, i = 0, start
-    while True:                      # walk to the matching close paren
+    while True:  # walk to the matching close paren
         if src[i] == "(":
             depth += 1
         elif src[i] == ")":
@@ -118,18 +117,28 @@ def main():
         for ref, pin in nodes:
             pin_net[(ref, pin)] = name
 
-    o = ['(kicad_sch', '  (version 20231120)', '  (generator "gen-schematic.py")',
-         '  (generator_version "8.0")', f'  (uuid "{uid()}")', '  (paper "A2")']
+    o = [
+        "(kicad_sch",
+        "  (version 20231120)",
+        '  (generator "gen-schematic.py")',
+        '  (generator_version "8.0")',
+        f'  (uuid "{uid()}")',
+        '  (paper "A2")',
+    ]
 
     o.append("  (lib_symbols")
-    for lib, name in sorted({(l, n) for l, n, _ in SYMBOL.values()}):
+    for lib, name in sorted({(lib, n) for lib, n, _ in SYMBOL.values()}):
         for line in lift_symbol(lib, name).splitlines():
             o.append("    " + line)
     o.append("  )")
 
     # Lay the connectors out in two columns, caps left and right as on the board.
-    order = [r for r, _, _ in NL.CAPS] + [r for r, _, _ in NL.STARTS] + \
-            [NL.RIBBON, NL.POWER, NL.C1, NL.NT1] + NL.HOLES
+    order = (
+        [r for r, _, _ in NL.CAPS]
+        + [r for r, _, _ in NL.STARTS]
+        + [NL.RIBBON, NL.POWER, NL.C1, NL.NT1]
+        + NL.HOLES
+    )
     # Everything must land on KiCad's 1.27 mm connection grid. An origin that
     # is off-grid drags every pin with it and ERC fills with endpoint_off_grid,
     # so positions are expressed in grid units and multiplied, never rounded.
@@ -150,18 +159,28 @@ def main():
         o.append(f'    (lib_id "{lib}:{name}") (at {x} {y} 0) (unit 1)')
         o.append("    (exclude_from_sim no) (in_bom yes) (on_board yes)")
         o.append(f'    (uuid "{uid()}")')
-        o.append(f'    (property "Reference" "{ref}" (at {x + 5} {y - 6} 0)'
-                 ' (effects (font (size 1.27 1.27)) (justify left)))')
-        o.append(f'    (property "Value" "{comp_val[ref]}" (at {x + 5} {y - 3.5} 0)'
-                 ' (effects (font (size 1.27 1.27)) (justify left)))')
-        o.append(f'    (property "Footprint" "{comp_fp[ref]}" (at {x} {y} 0)'
-                 ' (effects (font (size 1.27 1.27)) hide))')
-        o.append(f'    (property "Note" "{comp_note[ref]}" (at {x + 5} {y - 1} 0)'
-                 ' (effects (font (size 1.0 1.0)) (justify left)))')
+        o.append(
+            f'    (property "Reference" "{ref}" (at {x + 5} {y - 6} 0)'
+            " (effects (font (size 1.27 1.27)) (justify left)))"
+        )
+        o.append(
+            f'    (property "Value" "{comp_val[ref]}" (at {x + 5} {y - 3.5} 0)'
+            " (effects (font (size 1.27 1.27)) (justify left)))"
+        )
+        o.append(
+            f'    (property "Footprint" "{comp_fp[ref]}" (at {x} {y} 0)'
+            " (effects (font (size 1.27 1.27)) hide))"
+        )
+        o.append(
+            f'    (property "Note" "{comp_note[ref]}" (at {x + 5} {y - 1} 0)'
+            " (effects (font (size 1.0 1.0)) (justify left)))"
+        )
         for p in range(1, count + 1):
             o.append(f'    (pin "{p}" (uuid "{uid()}"))')
-        o.append(f'    (instances (project "button-board"'
-                 f' (path "/{uid()}" (reference "{ref}") (unit 1))))')
+        o.append(
+            f'    (instances (project "button-board"'
+            f' (path "/{uid()}" (reference "{ref}") (unit 1))))'
+        )
         o.append("  )")
 
     # One stub plus one label per connected pin. Unconnected pins get neither,
@@ -176,12 +195,16 @@ def main():
                 continue
             lib, name, _ = SYMBOL[ref]
             (px, py), (ex, ey), angle = stub_for(x, y, lib, name, p)
-            o.append(f'  (wire (pts (xy {px} {py}) (xy {ex} {ey}))'
-                     f' (stroke (width 0) (type default)) (uuid "{uid()}"))')
+            o.append(
+                f"  (wire (pts (xy {px} {py}) (xy {ex} {ey}))"
+                f' (stroke (width 0) (type default)) (uuid "{uid()}"))'
+            )
             lang = 0 if angle in (0, 180) else 90
-            o.append(f'  (label "{net}" (at {ex} {ey} {lang})'
-                     ' (effects (font (size 1.27 1.27)) (justify right))'
-                     f' (uuid "{uid()}"))')
+            o.append(
+                f'  (label "{net}" (at {ex} {ey} {lang})'
+                " (effects (font (size 1.27 1.27)) (justify right))"
+                f' (uuid "{uid()}"))'
+            )
 
     # The last cap's DOUT ends the chain. Flagging it explicitly is the
     # difference between "deliberately open" and "someone forgot a wire".

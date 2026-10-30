@@ -4,11 +4,11 @@
 namespace {
 
 // Cap colours, in wiring order, with the start button last.
-const char* const kButtonNames[config::kInputsPerPlayer] = {"BLUE",   "RED",    "WHITE",
-                                                            "GREEN",  "YELLOW", "START"};
+const char* const kButtonNames[config::kInputsPerPlayer] = {"BLUE",  "RED",    "WHITE",
+                                                            "GREEN", "YELLOW", "START"};
 
-const char* const kScreenNames[(uint8_t) DebugScreen::Count] = {
-    "LED WALK", "LED ALL", "BUTTONS", "CALIBRATE", "DISPLAY"};
+const char* const kScreenNames[(uint8_t) DebugScreen::Count] = {"LED WALK", "LED ALL", "BUTTONS",
+                                                                "CALIBRATE", "DISPLAY"};
 
 // Every cap shows this sequence before the walk moves on. The three primaries
 // come first and white last: a channel that is dead shows as a cap that skips
@@ -30,11 +30,21 @@ constexpr uint8_t kWalkColorCount = sizeof(kWalkColors) / sizeof(kWalkColors[0])
 // Every controller-to-display message, so the display side can be exercised
 // end to end without playing a round.
 const char* const kDisplayTestMessages[] = {
-    protocol::kNewGame,         protocol::kShowSplash,     protocol::kShowHighScore,
-    protocol::kShowPressStart,  protocol::kIsP1Ready,      protocol::kIsP2Ready,
-    protocol::kCountdownReady,  protocol::kCountdownSet,   protocol::kCountdownGo,
-    "#PLAYER1WIN:12345",        "#PLAYER2WIN:12345",       "#TIEGAME:12345",
-    "#MODE:CHASE",              "#SCORE:1234:5678",        "#TARGET:FF0000:00FF00",
+    protocol::kNewGame,
+    protocol::kShowSplash,
+    protocol::kShowHighScore,
+    protocol::kShowPressStart,
+    protocol::kIsP1Ready,
+    protocol::kIsP2Ready,
+    protocol::kCountdownReady,
+    protocol::kCountdownSet,
+    protocol::kCountdownGo,
+    "#PLAYER1WIN:12345",
+    "#PLAYER2WIN:12345",
+    "#TIEGAME:12345",
+    "#MODE:CHASE",
+    "#SCORE:1234:5678",
+    "#TARGET:FF0000:00FF00",
     "#TARGET:-:-",
 };
 constexpr uint8_t kDisplayTestCount =
@@ -176,8 +186,8 @@ void Debug::UpdateLedWalk(uint32_t now_ms) {
   _players[player]->Lamps().Show();
 
   char line[64];
-  snprintf(line, sizeof(line), "%s %s %s (pin %u)", _players[player]->Name(),
-           kButtonNames[index], step.name, (unsigned) LedPinFor(player, index));
+  snprintf(line, sizeof(line), "%s %s %s (pin %u)", _players[player]->Name(), kButtonNames[index],
+           step.name, (unsigned) LedPinFor(player, index));
   Serial.println(line);
 
   // The banner is 24 characters, so it gets the short form without the pin.
@@ -241,9 +251,9 @@ void Debug::UpdateButtonRead(uint32_t now_ms) {
   char line[96];
   const int8_t d0 = _players[0]->Input().DownIndex();
   const int8_t d1 = _players[1]->Input().DownIndex();
-  snprintf(line, sizeof(line), "P1 raw=%5d %-7s | P2 raw=%5d %-7s",
-           _players[0]->Input().RawValue(), d0 >= 0 ? kButtonNames[d0] : "-",
-           _players[1]->Input().RawValue(), d1 >= 0 ? kButtonNames[d1] : "-");
+  snprintf(line, sizeof(line), "P1 raw=%5d %-7s | P2 raw=%5d %-7s", _players[0]->Input().RawValue(),
+           d0 >= 0 ? kButtonNames[d0] : "-", _players[1]->Input().RawValue(),
+           d1 >= 0 ? kButtonNames[d1] : "-");
   Serial.println(line);
 }
 
@@ -359,8 +369,8 @@ void Debug::UpdateCalibrate(uint32_t now_ms) {
       const int delta = abs(_cal_result[0][i] - _cal_result[1][i]);
       if (delta > config::kLadderTolerance) {
         char line[64];
-        snprintf(line, sizeof(line), "NOTE: %s differs by %d between players",
-                 kButtonNames[i], delta);
+        snprintf(line, sizeof(line), "NOTE: %s differs by %d between players", kButtonNames[i],
+                 delta);
         Serial.println(line);
       }
     }

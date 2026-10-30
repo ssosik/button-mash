@@ -37,22 +37,22 @@
   X(StartCountdownReady, "STARTREADY", 2000)                                                       \
   X(StartCountdownSet, "STARTSET", 2000)                                                           \
   X(StartCountdownGo, "STARTGO", 1000)                                                             \
-  /* Start the medley at its first mode. */                                                       \
+  /* Start the medley at its first mode. */                                                        \
   X(StartGame, "STARTGAME", 200)                                                                   \
   /* Banner naming the next mode, lamps dark. */                                                   \
   X(ModeIntro, "MODEINTRO", config::kModeIntroMs)                                                  \
-  /* One mode's segment. Ends at that mode's own length; see MODE_LIST. */                        \
+  /* One mode's segment. Ends at that mode's own length; see MODE_LIST. */                         \
   X(PlayGame, "PLAYGAME", 0)                                                                       \
   X(GameEnd, "GAMEEND", 200)                                                                       \
   X(ShowWinner, "SHOWWINNER", 10000)                                                               \
-  /* Hardware test screens; leaves only when the operator asks. */                                  \
+  /* Hardware test screens; leaves only when the operator asks. */                                 \
   X(DebugMode, "DEBUGMODE", 0)
 
 enum GameState : uint8_t {
 #define X(name, label, timeout) name,
   GAME_STATE_LIST(X)
 #undef X
-  GameStateCount
+      GameStateCount
 };
 
 class Game {

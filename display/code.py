@@ -109,7 +109,7 @@ def load_highscore():
     comparing int to str.
     """
     try:
-        with open(HIGHSCORE_PATH, "r") as handle:
+        with open(HIGHSCORE_PATH) as handle:
             return int(handle.readline().strip())
     except (OSError, ValueError):
         return 0
@@ -163,8 +163,6 @@ def pinwheel_blade(x, y):
 def pinwheel_colors():
     """One colour per blade, the rainbow once round."""
     return [hue_color(i / PINWHEEL_BLADES, PINWHEEL_LEVEL) for i in range(PINWHEEL_BLADES)]
-
-
 
 
 def title_pixels(word):
@@ -437,9 +435,7 @@ def on_score(scenes, args):
         return
 
     scenes.show_splash(False)
-    scenes.set_text(
-        "{:>6d}".format(p1_score), "{:>6d}".format(p2_score), scrolling=False
-    )
+    scenes.set_text("{:>6d}".format(p1_score), "{:>6d}".format(p2_score), scrolling=False)
 
 
 def _win(scenes, args, winner):
@@ -580,9 +576,7 @@ def handle_line(scenes, line):
     handler = HANDLERS.get(verb)
     if handler is None:
         print("unknown message: {}".format(line))
-        scenes.set_text(
-            "unknown: {}     ".format(line), "unknown: {}     ".format(line)
-        )
+        scenes.set_text("unknown: {}     ".format(line), "unknown: {}     ".format(line))
         return
 
     handler(scenes, args)

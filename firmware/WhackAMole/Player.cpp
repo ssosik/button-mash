@@ -21,7 +21,9 @@ void Player::NotReady() {
   _lights->Clear();
 }
 
-bool Player::TakeStartPress() { return _input->TakePress(config::kStartButtonIndex); }
+bool Player::TakeStartPress() {
+  return _input->TakePress(config::kStartButtonIndex);
+}
 
 void Player::Penalize(int points) {
   _total_score -= points;

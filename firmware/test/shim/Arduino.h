@@ -22,8 +22,12 @@ typedef uint8_t byte;
 
 inline void pinMode(uint8_t, uint8_t) {}
 inline void digitalWrite(uint8_t, uint8_t) {}
-inline int digitalRead(uint8_t) { return HIGH; }
-inline int analogRead(uint8_t) { return 0; }
+inline int digitalRead(uint8_t) {
+  return HIGH;
+}
+inline int analogRead(uint8_t) {
+  return 0;
+}
 
 // Deterministic, so a failing run replays exactly. Defined in the test.
 long random(long howbig);

@@ -70,8 +70,7 @@ void CaptchaMode::Update(uint32_t now_ms) {
     if (!TakePress(i)) {
       continue;
     }
-    const bool on_target =
-        (int8_t) i == _target_cap || (in_grace && (int8_t) i == _previous_cap);
+    const bool on_target = (int8_t) i == _target_cap || (in_grace && (int8_t) i == _previous_cap);
     if (on_target && !found) {
       found = true;
       Owner().AddPoints(Decaying(config::kCaptchaStartPoints, config::kCaptchaFloorPoints,

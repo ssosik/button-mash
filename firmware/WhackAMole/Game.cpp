@@ -244,8 +244,7 @@ bool Game::HandleAttractInput(uint32_t now_ms) {
   // players in sequence with no early exit, so a simultaneous press left P2
   // overwriting the transition P1 had just made. Both pending flags are
   // cleared on the way out so a stale one cannot fire on a later visit here.
-  if (_start_pending[0] &&
-      now_ms - _start_pending_ms[0] >= config::kStartArbitrationMs) {
+  if (_start_pending[0] && now_ms - _start_pending_ms[0] >= config::kStartArbitrationMs) {
     _start_pending[0] = false;
     _start_pending[1] = false;
     _p1->Ready();
@@ -253,8 +252,7 @@ bool Game::HandleAttractInput(uint32_t now_ms) {
     return true;
   }
 
-  if (_start_pending[1] &&
-      now_ms - _start_pending_ms[1] >= config::kStartArbitrationMs) {
+  if (_start_pending[1] && now_ms - _start_pending_ms[1] >= config::kStartArbitrationMs) {
     _start_pending[0] = false;
     _start_pending[1] = false;
     _p2->Ready();

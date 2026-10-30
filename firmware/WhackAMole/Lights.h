@@ -24,9 +24,9 @@ struct Color {
 namespace colors {
 constexpr Color kOff = {0, 0, 0};
 constexpr Color kWhite = {255, 255, 255};
-constexpr Color kMole = {255, 200, 40};  // lit mole cap
-constexpr Color kHit = {0, 255, 60};     // brief flash on a correct hit
-constexpr Color kMiss = {255, 0, 0};     // brief flash on a wrong button
+constexpr Color kMole = {255, 200, 40}; // lit mole cap
+constexpr Color kHit = {0, 255, 60};    // brief flash on a correct hit
+constexpr Color kMiss = {255, 0, 0};    // brief flash on a wrong button
 
 // Primaries. The debug walk drives each channel on its own, which is what
 // distinguishes a dead colour from a dead pixel and catches a ring wired for a

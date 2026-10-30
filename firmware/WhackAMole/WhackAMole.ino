@@ -25,7 +25,7 @@ LadderInput p2_input(config::kP2LadderPin);
 #if WAM_LIGHTS_PIXELS
 // Both players share one chain; P1 owns it and transmits for both.
 PixelLights p1_lights(0, true);
-PixelLights p2_lights(config::kButtonsPerPlayer * config::kPixelsPerButton, false);
+PixelLights p2_lights(config::kButtonsPerPlayer* config::kPixelsPerButton, false);
 #else
 DigitalLights p1_lights(config::kP1LedPins);
 DigitalLights p2_lights(config::kP2LedPins);
@@ -39,7 +39,9 @@ Game game(p1, p2);
 // port until Game::Begin() runs below, because global constructors run before
 // the core has finished initializing the hardware.
 
-void setup() { game.Begin(); }
+void setup() {
+  game.Begin();
+}
 
 void loop() {
   static uint32_t last_tick_ms = 0;

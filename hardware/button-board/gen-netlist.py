@@ -16,6 +16,7 @@ positions follow kP1ButtonPins / kP2ButtonPins.
 Import with pcbnew: File > Import > Netlist. Footprint names are checked
 against KiCad 10's libraries; verify them if you are on a different release.
 """
+
 import argparse
 import pathlib
 import sys
@@ -51,7 +52,9 @@ CAP_COLOURS = ["BLUE", "RED", "WHITE", "GREEN", "YELLOW"]
 def config_pins(path=CFG):
     """Read kP1ButtonPins / kP2ButtonPins so this cannot drift from the firmware."""
     import re
-    src = open(path).read()
+
+    with open(path) as handle:
+        src = handle.read()
 
     def arr(name):
         m = re.search(name + r"\[\w+\]\s*=\s*\{([^}]*)\}", src)
@@ -79,9 +82,9 @@ def connectors():
     p1, p2 = config_pins()
     caps, starts = [], []
     for i, colour in enumerate(CAP_COLOURS):
-        caps.append((f"J{i+1}", f"P1 {colour}", ribbon_pos(p1[i])))
+        caps.append((f"J{i + 1}", f"P1 {colour}", ribbon_pos(p1[i])))
     for i, colour in enumerate(CAP_COLOURS):
-        caps.append((f"J{i+6}", f"P2 {colour}", ribbon_pos(p2[i])))
+        caps.append((f"J{i + 6}", f"P2 {colour}", ribbon_pos(p2[i])))
     starts.append(("J11", "P1 START", ribbon_pos(p1[5])))
     starts.append(("J12", "P2 START", ribbon_pos(p2[5])))
     return caps, starts
@@ -133,7 +136,7 @@ def build():
     # the line. The last cap's DOUT is deliberately unterminated.
     nets["DATA_IN"] = [(RIBBON, 5), (CAPS[0][0], 2)]
     for i in range(len(CAPS) - 1):
-        nets[f"DATA_{CAPS[i][0]}_{CAPS[i+1][0]}"] = [
+        nets[f"DATA_{CAPS[i][0]}_{CAPS[i + 1][0]}"] = [
             (CAPS[i][0], 4),
             (CAPS[i + 1][0], 2),
         ]
@@ -195,8 +198,12 @@ def table(comps, nets):
     for name in sorted(nets, key=lambda n: (not n.startswith(("+5V", "GND")), n)):
         nodes = ", ".join(f"{r}.{p}" for r, p in nets[name])
         out.append(f"{name:<22} {nodes}")
-    out += ["", "NOT CONNECTED", "-" * 72,
-            f"{CAPS[-1][0]}.4   DOUT of {CAPS[-1][1]} -- end of the pixel chain"]
+    out += [
+        "",
+        "NOT CONNECTED",
+        "-" * 72,
+        f"{CAPS[-1][0]}.4   DOUT of {CAPS[-1][1]} -- end of the pixel chain",
+    ]
     return "\n".join(out)
 
 

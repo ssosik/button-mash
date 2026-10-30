@@ -65,7 +65,9 @@ void ButtonInput::ClearPresses() {
 
 LadderInput::LadderInput(uint8_t analog_pin) : _pin(analog_pin) {}
 
-void LadderInput::Begin() { pinMode(_pin, INPUT); }
+void LadderInput::Begin() {
+  pinMode(_pin, INPUT);
+}
 
 int8_t LadderInput::Decode(int adc_value) {
   if (adc_value <= config::kLadderIdleCeiling) {

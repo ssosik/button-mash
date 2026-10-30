@@ -37,7 +37,9 @@ long random(long howsmall, long howbig) {
   return howbig <= howsmall ? howsmall : howsmall + random(howbig - howsmall);
 }
 
-void randomSeed(unsigned long seed) { g_rng = seed ? seed : 1; }
+void randomSeed(unsigned long seed) {
+  g_rng = seed ? seed : 1;
+}
 
 namespace {
 
@@ -146,7 +148,9 @@ int FindColor(const FakeLights& l, Color c) {
   return -1;
 }
 
-bool AllColor(const FakeLights& l, Color c) { return CountColor(l, c) == kCaps; }
+bool AllColor(const FakeLights& l, Color c) {
+  return CountColor(l, c) == kCaps;
+}
 
 bool InPalette(Color c) {
   for (uint8_t i = 0; i < palette::kCount; i++) {
@@ -542,8 +546,8 @@ void TestSimon() {
   CHECK(grew, "a pass did not replay the same sequence one step longer");
   CHECK(saw_fail, "the deliberate wrong answer did not fail the round");
   CHECK(replayed_same, "a failed round did not replay the same sequence");
-  std::printf("    scripted player: %d, %d passes, sequence reached %zu\n", r.player.Score(), passes,
-              shows.empty() ? 0 : shows.back().size());
+  std::printf("    scripted player: %d, %d passes, sequence reached %zu\n", r.player.Score(),
+              passes, shows.empty() ? 0 : shows.back().size());
 
   // Silence is a miss, not a way to wait out the segment.
   randomSeed(56);

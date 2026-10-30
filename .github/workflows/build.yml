@@ -25,6 +25,17 @@ jobs:
       - name: Compile every hardware configuration
         run: make matrix
 
+  # Plays every game mode and the lamp dance on the runner, under
+  # AddressSanitizer and UBSan. clang, because that is what it is developed
+  # against on macOS; the runner image ships it.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the host tests
+        run: make test CXX=clang++
+
   format:
     runs-on: ubuntu-latest
     steps:
@@ -45,8 +56,8 @@ jobs:
 
       - uses: astral-sh/ruff-action@v3
         with:
-          args: check display/
+          args: check .
 
       - uses: astral-sh/ruff-action@v3
         with:
-          args: format --check display/
+          args: format --check .

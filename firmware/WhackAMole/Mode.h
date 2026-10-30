@@ -85,8 +85,7 @@ protected:
   // Points for an action begun at since_ms: `start` if instant, falling
   // linearly to `floor` across window_ms. Every timed mode scores through this
   // so their numbers stay comparable across a medley.
-  static int Decaying(int start, int floor, uint32_t since_ms, uint32_t now_ms,
-                      uint32_t window_ms);
+  static int Decaying(int start, int floor, uint32_t since_ms, uint32_t now_ms, uint32_t window_ms);
 
 private:
   Player* _owner;

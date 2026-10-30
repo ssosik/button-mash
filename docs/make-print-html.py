@@ -11,7 +11,11 @@ a section renamed or added shows up in the TOC on the next build with nothing
 to remember. Anchor ids are derived from the heading text the same way, so the
 links in the PDF point at whatever the headings currently say.
 """
-import pathlib, re, sys, unicodedata
+
+import pathlib
+import re
+import sys
+import unicodedata
 
 src = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "docs/wiring.html")
 dst = pathlib.Path(sys.argv[2] if len(sys.argv) > 2 else "build/wiring-print.html")
@@ -54,8 +58,10 @@ def add_anchors(body):
         if m.group("sec"):
             sid = uniq(slug(m.group("sect")))
             entries.append((2, m.group("sect"), m.group("secn"), sid))
-            return (f'{m.group("sec")} id="{sid}">{m.group("sect")}</h2>'
-                    f'<span class="n">{m.group("secn")}</span>')
+            return (
+                f'{m.group("sec")} id="{sid}">{m.group("sect")}</h2>'
+                f'<span class="n">{m.group("secn")}</span>'
+            )
         sid = uniq(slug(m.group("subt")))
         entries.append((3, m.group("subt"), None, sid))
         return f'{m.group("sub")} id="{sid}">{m.group("subt")}</h3>'
@@ -76,8 +82,7 @@ def build_toc(entries):
                 open_sub = False
             if len(out) > 3:
                 out.append("</li>")
-            out.append(f'<li><a href="#{sid}">{text}</a>'
-                       f' <span class="n">{subtitle}</span>')
+            out.append(f'<li><a href="#{sid}">{text}</a> <span class="n">{subtitle}</span>')
         else:
             if not open_sub:
                 out.append("<ul>")
@@ -133,7 +138,8 @@ figcaption, p, ol.steps li { max-width:none; }
 FOOT = """
 <p style="margin-top:36px;padding-top:10px;border-top:1px solid var(--rule);
    font-family:var(--mono);font-size:9.5px;color:var(--ink-3)">
-  Whack-A-Mole Attack &middot; harness reference &middot; values mirrored from firmware/WhackAMole/Config.h
+  Whack-A-Mole Attack &middot; harness reference &middot;
+  values mirrored from firmware/WhackAMole/Config.h
 </p>
 """
 
@@ -143,13 +149,18 @@ assert body.endswith("</div>"), "fragment should end with the wrapper div"
 body, entries = add_anchors(body)
 assert entries, "no headings found -- has the sechead markup changed?"
 body = body.replace("<section>", build_toc(entries) + "<section>", 1)
-doc = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-       '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-       + head + PRINT_CSS + '\n</head>\n<body>\n'
-       + body[:-len("</div>")] + FOOT + "</div>\n</body>\n</html>\n")
+doc = (
+    '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+    '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+    + head
+    + PRINT_CSS
+    + "\n</head>\n<body>\n"
+    + body[: -len("</div>")]
+    + FOOT
+    + "</div>\n</body>\n</html>\n"
+)
 
 dst.parent.mkdir(parents=True, exist_ok=True)
 dst.write_text(doc)
 secs = sum(1 for e in entries if e[0] == 2)
-print(f"{dst} ({len(doc)} bytes) -- TOC: {secs} sections, "
-      f"{len(entries) - secs} subsections")
+print(f"{dst} ({len(doc)} bytes) -- TOC: {secs} sections, {len(entries) - secs} subsections")
