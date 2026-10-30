@@ -268,6 +268,8 @@ Matrix Portal began answering the handshake and the Teensy stopped sitting in
 
 # Circuit
 
+![System overview: power bank, HUSB238 and star point feeding the Matrix Portal, LED panel, controller and button board; Teensy linked to the Portal over Serial1 and to the button board over a 14-way harness](docs/system-diagram.svg)
+
 - **[docs/mole-table-wiring.pdf](docs/mole-table-wiring.pdf)** — the full wiring
   reference: power topology and current budget, the controller stripboard, the button
   board, the per-cap connectors, and build order. `docs/wiring.html` is its source;
