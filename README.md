@@ -2,6 +2,8 @@
 
 Project files for a two-player whack-a-mole / button mash game
 
+[![Button Mash game play](https://i.ytimg.com/vi/3Ty43hzvSxc/hqdefault.jpg)](https://youtu.be/3Ty43hzvSxc)
+
 Original idea by https://github.com/DIYTechBros/ButtonSmack / https://www.youtube.com/watch?v=FXypfZi_UDI
 
 [![Watch the video](https://img.youtube.com/vi/DrATmFxHTjc/hqdefault.jpg)](https://www.youtube.com/embed/DrATmFxHTjc)
